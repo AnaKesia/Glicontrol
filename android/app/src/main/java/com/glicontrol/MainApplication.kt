@@ -1,4 +1,4 @@
-package com.glicontrol
+package com.glicare;
 
 import android.app.Application
 import com.facebook.react.PackageList
