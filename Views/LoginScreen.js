@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, TextInput, Button, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import auth from '@react-native-firebase/auth';
 import { useNavigation } from '@react-navigation/native';
 
 const LoginScreen: React.FC = () => {
@@ -8,6 +9,10 @@ const LoginScreen: React.FC = () => {
   const [mostrarErro, setMostrarErro] = useState(false);
   const navigation = useNavigation();
 
+  const handleRegistro = () => {
+    navigation.navigate('Registro');
+  };
+
   const handleLogin = () => {
     if (!email || !senha) {
       setMostrarErro(true);
@@ -15,11 +20,19 @@ const LoginScreen: React.FC = () => {
     }
 
     setMostrarErro(false);
-    console.log('Login com:', email, senha);
-  };
 
-  const handleRegistro = () => {
-    navigation.navigate('Registro');
+    auth()
+      .signInWithEmailAndPassword(email, senha)
+      .then(userCredential => {
+        console.log('Login bem-sucedido:', userCredential.user);
+        Alert.alert('Sucesso', 'Login realizado com sucesso!');
+        navigation.navigate('PaginaInicial');
+      })
+      .catch(error => {
+        console.error('Erro ao fazer login:', error);
+        Alert.alert('Erro', error.message);
+        setMostrarErro(true);
+      });
   };
 
   return (
