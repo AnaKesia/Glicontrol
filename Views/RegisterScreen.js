@@ -2,8 +2,6 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, Button, StyleSheet, Alert } from 'react-native';
 import { auth } from '../firebaseConfig';
 
-console.log('Auth conectado?', !!auth);
-
 const RegisterScreen = ({ navigation }) => {
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
