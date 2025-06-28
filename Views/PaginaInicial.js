@@ -1,12 +1,12 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import React, { useState, useCallback, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, Dimensions } from 'react-native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { LineChart } from 'react-native-chart-kit';
-import { Dimensions } from 'react-native';
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import notifee, { TriggerType, RepeatFrequency } from '@notifee/react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { buscarMedicoesUsuario } from '../firebaseService';
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -15,71 +15,93 @@ const HomeScreen = () => {
   const [labels, setLabels] = useState([]);
   const [glicemias, setGlicemias] = useState([]);
 
-const carregarMedicoes = async () => {
-  const userId = auth().currentUser?.uid;
-  if (!userId) return;
-
-  const agora = new Date();
-  const inicioDoDia = new Date(
-    agora.getFullYear(),
-    agora.getMonth(),
-    agora.getDate(),
-    0, 0, 0
-  );
-
-  try {
-    const snapshot = await firestore()
-      .collection('medicoes')
-      .where('usuarioId', '==', userId)
-      .where('timestamp', '>=', firestore.Timestamp.fromDate(inicioDoDia))
-      .orderBy('timestamp', 'desc')
-      .get();
-
-    const labelsAux = [];
-    const dados = [];
-    const dadosLocais = [];
-
-    snapshot.forEach(doc => {
-      const { valor, timestamp, observacoes } = doc.data();
-      const data = new Date(timestamp.seconds * 1000);
-
-      const hora = data.toLocaleTimeString([], {
-        hour: '2-digit',
-        minute: '2-digit',
-      });
-
-      labelsAux.unshift(hora);
-      dados.unshift(valor);
-      dadosLocais.unshift({ valor, hora, observacoes });
-    });
-
-    if (dados.length > 0) {
-      setLabels(labelsAux);
-      setGlicemias(dados);
-      await AsyncStorage.setItem('medicoesHoje', JSON.stringify(dadosLocais));
-    } else {
-      console.log('Nenhuma medição encontrada hoje.');
-    }
-  } catch (error) {
-    console.warn('Erro ao buscar do Firebase. Tentando dados locais.');
+  const carregarMedicoes = async () => {
     try {
-      const cache = await AsyncStorage.getItem('medicoesHoje');
-      if (cache) {
-        const dadosLocais = JSON.parse(cache);
-        setLabels(dadosLocais.map(d => d.hora));
-        setGlicemias(dadosLocais.map(d => d.valor));
-      }
-    } catch (err) {
-      console.error('Erro ao carregar dados locais:', err);
-      Alert.alert('Erro', 'Não foi possível carregar os dados.');
-    }
-  }
-};
+      const dados = await buscarMedicoesUsuario();
 
+      if (dados.length > 0) {
+        const labelsAux = [];
+        const valores = [];
+
+        const ultimos = dados.slice(0, 5).reverse();
+
+        ultimos.forEach(item => {
+          const data = new Date(item.timestamp.seconds * 1000);
+          const hora = data.toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit',
+          });
+
+          labelsAux.push(hora);
+          valores.push(item.valor);
+        });
+
+        setLabels(labelsAux);
+        setGlicemias(valores);
+      } else {
+        setLabels([]);
+        setGlicemias([]);
+      }
+    } catch (error) {
+      Alert.alert('Erro', 'Falha ao carregar medições: ' + error.message);
+    }
+  };
+
+  const agendarNotificacoesMedicamentos = async () => {
+    const usuario = auth().currentUser;
+    if (!usuario) return;
+
+    try {
+      const querySnapshot = await firestore()
+        .collection('medicamentos')
+        .where('userid', '==', usuario.uid)
+        .where('Notificar', '==', true)
+        .get();
+
+      await notifee.cancelAllNotifications();
+
+      for (const doc of querySnapshot.docs) {
+        const medicamento = doc.data();
+        const [hora, minuto] = medicamento.Horário.split(':').map(Number);
+
+        const agora = new Date();
+        let horarioNotificacao = new Date();
+        horarioNotificacao.setHours(hora);
+        horarioNotificacao.setMinutes(minuto);
+        horarioNotificacao.setSeconds(0);
+        horarioNotificacao.setMilliseconds(0);
+
+        if (horarioNotificacao <= agora) {
+          horarioNotificacao.setDate(horarioNotificacao.getDate() + 1);
+        }
+
+        await notifee.createTriggerNotification(
+          {
+            title: 'Hora de tomar o medicamento',
+            body: `${medicamento.Nome} - ${medicamento.Dose}`,
+            android: { channelId: 'medicamentos' },
+          },
+          {
+            type: TriggerType.TIMESTAMP,
+            timestamp: horarioNotificacao.getTime(),
+            repeatFrequency: RepeatFrequency.DAILY,
+          }
+        );
+      }
+    } catch (error) {
+      console.error('Erro ao agendar notificações:', error);
+    }
+  };
 
   useEffect(() => {
-    carregarMedicoes();
+    agendarNotificacoesMedicamentos();
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      carregarMedicoes();
+    }, [])
+  );
 
   const handleLogout = () => {
     auth()
@@ -88,7 +110,7 @@ const carregarMedicoes = async () => {
         navigation.replace('Login');
       })
       .catch(error => {
-        console.error('Erro ao deslogar:', error);
+        Alert.alert('Erro', 'Falha ao deslogar: ' + error.message);
       });
   };
 
@@ -104,27 +126,25 @@ const carregarMedicoes = async () => {
 
   return (
     <View style={styles.container}>
-
-
       <Text style={styles.title}>Últimas Medições de Glicemia</Text>
 
-    <TouchableOpacity onPress={() => navigation.navigate('ListaMedicoes')}>
-      <LineChart
-        data={data}
-        width={screenWidth - 30}
-        height={220}
-        chartConfig={{
-          backgroundColor: '#007AFF',
-          backgroundGradientFrom: '#007AFF',
-          backgroundGradientTo: '#001f3f',
-          decimalPlaces: 0,
-          color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
-          labelColor: () => '#fff',
-        }}
-        bezier
-        style={styles.chart}
-      />
-    </TouchableOpacity>
+      <TouchableOpacity onPress={() => navigation.navigate('ListaMedicoes')}>
+        <LineChart
+          data={data}
+          width={screenWidth - 30}
+          height={220}
+          chartConfig={{
+            backgroundColor: '#007AFF',
+            backgroundGradientFrom: '#007AFF',
+            backgroundGradientTo: '#001f3f',
+            decimalPlaces: 0,
+            color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+            labelColor: () => '#fff',
+          }}
+          bezier
+          style={styles.chart}
+        />
+      </TouchableOpacity>
 
       <TouchableOpacity
         style={styles.fab}
@@ -166,11 +186,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 5,
-  },
-  logoutButton: {
-    position: 'absolute',
-    top: 40,
-    left: 20,
-    zIndex: 1,
   },
 });

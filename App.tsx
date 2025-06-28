@@ -2,13 +2,21 @@ import React, { useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import auth from '@react-native-firebase/auth';
+import notifee from '@notifee/react-native';
+
 import LoginScreen from './Views/LoginScreen';
 import RegisterScreen from './Views/RegisterScreen';
 import PaginaInicial from './Views/PaginaInicial';
 import InserirGlicemia from './Views/InserirGlicemia';
 import ListaMedicoes from './Views/ListaMedicoes';
 import CadastrarMedicamento from './Views/CadastrarMedicamento';
+import ListaRefeicoes from './Views/ListaRefeicoes';
+import InserirRefeicao from './Views/InserirRefeicao';
 import DrawerNavigator from './Views/DrawerNavigator';
+import RegistrarSintoma from './Views/RegistrarSintoma';
+import ListaSintomas from './Views/ListaSintomas';
+import ConfirmarUsoMedicamento from './Views/ConfirmarUsoMedicamento';
+import ListaUsoMedicamento from './Views/ListaUsoMedicamento';
 import 'react-native-gesture-handler';
 
 const Stack = createNativeStackNavigator();
@@ -18,6 +26,15 @@ export default function App() {
   const [initializing, setInitializing] = useState(true);
 
   useEffect(() => {
+    const criarCanalNotificacoes = async () => {
+      await notifee.createChannel({
+        id: 'medicamentos',
+        name: 'Notificações de Medicamentos',
+      });
+    };
+
+    criarCanalNotificacoes();
+
     const unsubscribe = auth().onAuthStateChanged((usr) => {
       setUser(usr);
       if (initializing) setInitializing(false);
@@ -34,10 +51,16 @@ export default function App() {
         {user ? (
           <>
             <Stack.Screen name="HomeDrawer" component={DrawerNavigator} />
+            <Stack.Screen name="PaginaInicial" component={PaginaInicial} />
             <Stack.Screen name="InserirGlicemia" component={InserirGlicemia} />
             <Stack.Screen name="CadastrarMedicamento" component={CadastrarMedicamento} />
             <Stack.Screen name="ListaMedicoes" component={ListaMedicoes} />
-
+            <Stack.Screen name="ListaRefeicoes" component={ListaRefeicoes} />
+            <Stack.Screen name="InserirRefeicao" component={InserirRefeicao} />
+            <Stack.Screen name="RegistrarSintoma" component={RegistrarSintoma} />
+            <Stack.Screen name="ListaSintomas" component={ListaSintomas} />
+            <Stack.Screen name="ConfirmarUsoMedicamento" component={ConfirmarUsoMedicamento} />
+            <Stack.Screen name="ListaUsoMedicamento" component={ListaUsoMedicamento} />
           </>
         ) : (
           <>

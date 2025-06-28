@@ -4,6 +4,8 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import PaginaInicial from './PaginaInicial';
 import ListaMedicoes from './ListaMedicoes';
 import ListaRemedios from './ListaRemedios';
+import ListaRefeicoes from './ListaRefeicoes';
+import ListaSintomas from './ListaSintomas';
 
 import auth from '@react-native-firebase/auth';
 
@@ -36,10 +38,12 @@ export default function DrawerNavigator() {
         drawerInactiveTintColor: '#000',
       }}
     >
-      {/* Página inicial como padrão */}
+      {}
       <Drawer.Screen name="Início" component={PaginaInicial} />
       <Drawer.Screen name="Medições" component={ListaMedicoes} />
       <Drawer.Screen name="Medicamentos" component={ListaRemedios} />
+      <Drawer.Screen name="Refeições" component={ListaRefeicoes} />
+      <Drawer.Screen name="Sintomas" component={ListaSintomas} />
     </Drawer.Navigator>
   );
 }

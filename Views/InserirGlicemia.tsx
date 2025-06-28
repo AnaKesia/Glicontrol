@@ -1,12 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, Alert, Platform } from 'react-native';
-import firestore from '@react-native-firebase/firestore';
-import auth from '@react-native-firebase/auth';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import {
+  View, Text, TextInput, Button, StyleSheet, Alert, Platform,
+} from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { useNavigation, useRoute } from '@react-navigation/native';
 
-const InserirGlicemia = () => {
+import { GlicemiaService } from '../services/GlicemiaService';
+import { validarMedicao } from '../utils/validacao';
+
+const glicemiaService = new GlicemiaService();
+
+const InserirGlicemiaScreen = () => {
   const [valor, setValor] = useState('');
   const [categoria, setCategoria] = useState('jejum');
   const [dataHora, setDataHora] = useState(new Date());
@@ -19,59 +24,39 @@ const InserirGlicemia = () => {
 
   useEffect(() => {
     if (medicao) {
-      setValor(medicao.valor.toString());
+      setValor(String(medicao.valor));
       setCategoria(medicao.categoria);
-      setDataHora(medicao.timestamp?.seconds ? new Date(medicao.timestamp.seconds * 1000) : new Date());
-      setObservacao(medicao.observacao || medicao.observacoes || '');
+      setDataHora(
+        medicao.timestamp?.seconds
+          ? new Date(medicao.timestamp.seconds * 1000)
+          : new Date()
+      );
+      setObservacao(medicao.observacao || '');
     }
   }, [medicao]);
 
   const handleSalvar = async () => {
-    const usuario = auth().currentUser;
-
-    if (!usuario) {
-      Alert.alert('Erro', 'Usuário não autenticado');
+    const erro = validarMedicao(valor, categoria);
+    if (erro) {
+      Alert.alert('Erro', erro);
       return;
     }
 
-    if (!valor || isNaN(Number(valor)) || !categoria) {
-      Alert.alert('Erro', 'Preencha todos os campos corretamente');
-      return;
-    }
+    const dados = {
+      valor: Number(valor),
+      categoria,
+      timestamp: dataHora,
+      observacao,
+    };
 
     try {
-      const dados = {
-        usuarioId: usuario.uid,
-        valor: Number(valor),
-        categoria,
-        timestamp: firestore.Timestamp.fromDate(dataHora),
-        observacao: observacao || '',
-      };
-
-      if (medicao?.id) {
-        // Atualizar
-        await firestore()
-          .collection('medicoes')
-          .doc(medicao.id)
-          .set(dados, { merge: true });
-        Alert.alert('Sucesso', 'Medição atualizada!');
-      } else {
-        // Criar nova
-        await firestore().collection('medicoes').add(dados);
-        Alert.alert('Sucesso', 'Medição registrada!');
-      }
-
+      const mensagem = await glicemiaService.salvarMedicao(dados, medicao?.id);
+      Alert.alert('Sucesso', mensagem);
       navigation.goBack();
     } catch (error) {
-      console.error('Erro ao salvar medição:', error);
+      console.error(error);
       Alert.alert('Erro', 'Não foi possível salvar a medição.');
     }
-  };
-
-  const aoAlterarHorario = (event, selectedDate) => {
-    const horaEscolhida = selectedDate || dataHora;
-    setMostrarRelogio(Platform.OS === 'ios');
-    setDataHora(horaEscolhida);
   };
 
   return (
@@ -89,7 +74,7 @@ const InserirGlicemia = () => {
       <Picker
         selectedValue={categoria}
         style={styles.input}
-        onValueChange={(itemValue) => setCategoria(itemValue)}
+        onValueChange={setCategoria}
       >
         <Picker.Item label="Jejum" value="jejum" />
         <Picker.Item label="Pós-Café" value="pos-cafe" />
@@ -108,9 +93,12 @@ const InserirGlicemia = () => {
         <DateTimePicker
           value={dataHora}
           mode="time"
-          is24Hour={true}
+          is24Hour
           display="default"
-          onChange={aoAlterarHorario}
+          onChange={(event, date) => {
+            setMostrarRelogio(Platform.OS === 'ios');
+            if (date) setDataHora(date);
+          }}
         />
       )}
 
@@ -121,15 +109,18 @@ const InserirGlicemia = () => {
         value={observacao}
         onChangeText={setObservacao}
         autoCapitalize="sentences"
-        autoCorrect={true}
+        autoCorrect
       />
 
-      <Button title={medicao ? 'Salvar Alterações' : 'Salvar Medição'} onPress={handleSalvar} />
+      <Button
+        title={medicao ? 'Salvar Alterações' : 'Salvar Medição'}
+        onPress={handleSalvar}
+      />
     </View>
   );
 };
 
-export default InserirGlicemia;
+export default InserirGlicemiaScreen;
 
 const styles = StyleSheet.create({
   container: {

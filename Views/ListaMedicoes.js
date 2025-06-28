@@ -1,17 +1,18 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, FlatList, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { buscarMedicoesUsuario, deletarMedicao } from '../firebaseService';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { formatarData } from '../utils/dataUtils';
 
 const ListaMedicoes = () => {
   const navigation = useNavigation();
   const [medicoes, setMedicoes] = useState([]);
 
-  const carregarMedicoes = async () => {
+  const carregarMedicoes = useCallback(async () => {
     const dados = await buscarMedicoesUsuario();
     setMedicoes(dados);
-  };
+  }, []);
 
   const confirmarRemocao = (id) => {
     Alert.alert('Confirmar', 'Deseja remover esta medição?', [
@@ -30,61 +31,49 @@ const ListaMedicoes = () => {
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', carregarMedicoes);
     return unsubscribe;
-  }, [navigation]);
+  }, [navigation, carregarMedicoes]);
 
-  const renderItem = ({ item }) => (
-    <View style={styles.item}>
-      <Text style={styles.texto}>Valor: {item.valor} mg/dL</Text>
-      <Text style={styles.texto}>
-        Categoria: {item.categoria.charAt(0).toUpperCase() + item.categoria.slice(1).toLowerCase()}
-      </Text>
-        <Text style={styles.texto}>
-          Data:{' '}
-          {item.timestamp && item.timestamp.seconds ? (
-            new Date(item.timestamp.seconds * 1000).toLocaleString('pt-BR', {
-              day: '2-digit',
-              month: '2-digit',
-              year: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit',
-            })
-          ) : (
-            'Data inválida'
-          )}
-        </Text>
-
-      {item.observacoes !== undefined && item.observacoes.trim() !== '' && (
-        <Text style={styles.texto}>Observações: {item.observacoes}</Text>
-      )}
-      <View style={styles.acoes}>
-        <TouchableOpacity
-          onPress={() => navigation.navigate('InserirGlicemia', { medicao: item })}
-          style={styles.botaoEditar}
-        >
-          <Icon name="edit" size={18} color="#fff" />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => confirmarRemocao(item.id)} style={styles.botaoExcluir}>
-          <Icon name="delete" size={18} color="#fff" />
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
+  const renderItem = ({ item }) => <ItemMedicao item={item} onEditar={() => navigation.navigate('InserirGlicemia', { medicao: item })} onExcluir={() => confirmarRemocao(item.id)} />;
 
   return (
     <View style={styles.container}>
-    <Text style={{ color: 'white', marginBottom: 10 }}>Lista de Medições:</Text>
-     <FlatList
-       data={medicoes}
-       keyExtractor={(item) => item.id}
-       renderItem={renderItem}
-       contentContainerStyle={{ paddingBottom: 20 }}
-       ListEmptyComponent={
-         <Text style={{ color: 'white', textAlign: 'center', marginTop: 20 }}>
-           Nenhuma medição encontrada
-         </Text>
-       }
-     />
-</View>
+      <Text style={styles.titulo}>Lista de Medições:</Text>
+      <FlatList
+        data={medicoes}
+        keyExtractor={(item) => item.id}
+        renderItem={renderItem}
+        contentContainerStyle={{ paddingBottom: 20 }}
+        ListEmptyComponent={<Text style={styles.vazio}>Nenhuma medição encontrada</Text>}
+      />
+    </View>
+  );
+};
+
+const ItemMedicao = ({ item, onEditar, onExcluir }) => {
+  const navigation = useNavigation();
+
+  const irParaSintomas = () => {
+    navigation.navigate('RegistrarSintoma', { glicemiaId: item.id });
+  };
+
+  return (
+    <View style={styles.item}>
+      <Text style={styles.texto}>Valor: {item.valor} mg/dL</Text>
+      <Text style={styles.texto}>Categoria: {item.categoria.charAt(0).toUpperCase() + item.categoria.slice(1).toLowerCase()}</Text>
+      <Text style={styles.texto}>Data: {formatarData(item.timestamp)}</Text>
+      {item.observacoes?.trim() && <Text style={styles.texto}>Observações: {item.observacoes}</Text>}
+      <View style={styles.acoes}>
+        <TouchableOpacity onPress={onEditar} style={styles.botaoEditar}>
+          <Icon name="edit" size={18} color="#fff" />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={onExcluir} style={styles.botaoExcluir}>
+          <Icon name="delete" size={18} color="#fff" />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={irParaSintomas} style={styles.botaoSintoma}>
+          <Icon name="healing" size={18} color="#fff" />
+        </TouchableOpacity>
+      </View>
+    </View>
   );
 };
 
@@ -122,4 +111,23 @@ const styles = StyleSheet.create({
     padding: 8,
     borderRadius: 5,
   },
+    titulo: {
+      color: '#fff',
+      fontSize: 22,
+      fontWeight: '700',
+      marginBottom: 20,
+      alignSelf: 'center',
+    },
+    vazio: {
+      color: '#ccc',
+      fontSize: 18,
+      alignSelf: 'center',
+      marginTop: 30,
+    },
+    botaoSintoma: {
+      backgroundColor: '#00AAFF',
+      padding: 8,
+      borderRadius: 5,
+      marginLeft: 10,
+    },
 });

@@ -3,8 +3,9 @@ import { View, Text, FlatList, StyleSheet, TouchableOpacity, Alert } from 'react
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { Picker } from '@react-native-picker/picker';
 
-export default function ListaRemedios({ navigation }) {
+const ListaRemedios = ({ navigation }) => {
   const [medicamentos, setMedicamentos] = useState([]);
 
   useEffect(() => {
@@ -14,16 +15,26 @@ export default function ListaRemedios({ navigation }) {
       .where('userid', '==', userId)
       .onSnapshot(snapshot => {
         const lista = snapshot.docs
-          .map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-          }))
+          .map(doc => ({ id: doc.id, ...doc.data() }))
           .sort((a, b) => a.Horário.localeCompare(b.Horário));
         setMedicamentos(lista);
       });
 
     return unsubscribe;
   }, []);
+
+  useEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <TouchableOpacity
+          onPress={() => navigation.navigate('ListaUsoMedicamento')}
+          style={{ marginRight: 16 }}
+        >
+          <Icon name="menu-book" size={24} color="#fff" />
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation]);
 
   const confirmarExclusao = (id) => {
     Alert.alert('Excluir', 'Deseja excluir este medicamento?', [
@@ -32,38 +43,19 @@ export default function ListaRemedios({ navigation }) {
         text: 'Sim',
         onPress: async () => {
           await firestore().collection('medicamentos').doc(id).delete();
-          setMedicamentos(prev => prev.filter(item => item.id !== id)); // atualiza lista imediatamente
+          setMedicamentos(prev => prev.filter(item => item.id !== id));
         },
       },
     ]);
   };
 
   const renderItem = ({ item }) => (
-    <View style={styles.item}>
-      <View style={{ flex: 1 }}>
-        <Text style={styles.nome}>{item.Nome}</Text>
-        <Text>Dose: {item.Dose}</Text>
-        <Text>Horário: {item.Horário}</Text>
-        {item.Observações ? <Text>Obs: {item.Observações}</Text> : null}
-      </View>
-
-      <View style={styles.buttonsContainer}>
-       <TouchableOpacity
-         onPress={() => navigation.navigate('CadastrarMedicamento', { editar: true, dados: item })}
-         style={styles.editButton}
-       >
-         <Icon name="edit" size={24} color="#007AFF" />
-       </TouchableOpacity>
-
-       <TouchableOpacity
-         onPress={() => confirmarExclusao(item.id)}
-         style={styles.deleteButton}
-       >
-         <Icon name="delete" size={24} color="red" />
-       </TouchableOpacity>
-
-      </View>
-    </View>
+    <ItemMedicamento
+      item={item}
+      onEditar={() => navigation.navigate('CadastrarMedicamento', { editar: true, dados: item })}
+      onExcluir={() => confirmarExclusao(item.id)}
+      onConfirmarUso={() => navigation.navigate('ConfirmarUsoMedicamento', { medicamento: item })}
+    />
   );
 
   return (
@@ -74,7 +66,6 @@ export default function ListaRemedios({ navigation }) {
         renderItem={renderItem}
         ListEmptyComponent={<Text style={styles.empty}>Nenhum medicamento cadastrado.</Text>}
       />
-
       <TouchableOpacity
         style={styles.addButton}
         onPress={() => navigation.navigate('CadastrarMedicamento')}
@@ -83,7 +74,31 @@ export default function ListaRemedios({ navigation }) {
       </TouchableOpacity>
     </View>
   );
-}
+};
+
+const ItemMedicamento = ({ item, onEditar, onExcluir, onConfirmarUso }) => (
+  <View style={styles.item}>
+    <View style={{ flex: 1 }}>
+      <Text style={styles.nome}>{item.Nome}</Text>
+      <Text>Dose: {item.Dose}</Text>
+      <Text>Horário: {item.Horário}</Text>
+      {item.Observações ? <Text>Obs: {item.Observações}</Text> : null}
+    </View>
+    <View style={styles.buttonsContainer}>
+      <TouchableOpacity onPress={onEditar} style={styles.editButton}>
+        <Icon name="edit" size={24} color="#007AFF" />
+      </TouchableOpacity>
+      <TouchableOpacity onPress={onExcluir} style={styles.deleteButton}>
+        <Icon name="delete" size={24} color="red" />
+      </TouchableOpacity>
+      <TouchableOpacity onPress={onConfirmarUso} style={styles.checkButton}>
+        <Icon name="check-circle" size={24} color="green" />
+      </TouchableOpacity>
+    </View>
+  </View>
+);
+
+export default ListaRemedios;
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16 },
@@ -119,6 +134,9 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   deleteButton: {
+    padding: 8,
+  },
+  checkButton: {
     padding: 8,
   },
 });

@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
-import notifee from '@notifee/react-native';
+import notifee, { TriggerType, RepeatFrequency, AndroidImportance } from '@notifee/react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
 const CadastrarMedicamento = ({ route, navigation }) => {
@@ -24,28 +24,74 @@ const CadastrarMedicamento = ({ route, navigation }) => {
       setNome(dados.Nome);
       setDose(dados.Dose);
       setObservacoes(dados.Observações || '');
-      const hora = new Date();
-      const [h, m] = dados.Horário.split(':');
-      hora.setHours(h);
-      hora.setMinutes(m);
-      setHorario(hora);
+      setNotificar(dados.Notificar || false);
+
+      const [hora, minuto] = dados.Horário.split(':').map(Number);
+      const novaHora = new Date();
+      novaHora.setHours(hora);
+      novaHora.setMinutes(minuto);
+      novaHora.setSeconds(0);
+      novaHora.setMilliseconds(0);
+      setHorario(novaHora);
     }
   }, [editar, dados]);
 
+  const formatarHorario = (date) => {
+    return date.toTimeString().slice(0, 5);
+  };
+
+  const prepararDados = (uid) => ({
+    userid: uid,
+    Nome: nome.trim(),
+    Dose: dose.trim(),
+    Observações: observacoes.trim(),
+    Horário: formatarHorario(horario),
+    Notificar: notificar,  // <<< Aqui salva o campo
+  });
+
+  const agendarNotificacao = async () => {
+    try {
+      await notifee.createChannel({
+        id: 'medicamentos',
+        name: 'Lembretes de Medicamentos',
+        importance: AndroidImportance.HIGH,
+      });
+
+      const agora = new Date();
+      let dataNotificacao = new Date(horario);
+      dataNotificacao.setSeconds(0);
+      dataNotificacao.setMilliseconds(0);
+
+      if (dataNotificacao <= agora) {
+        dataNotificacao.setDate(dataNotificacao.getDate() + 1);
+      }
+
+      await notifee.createTriggerNotification(
+        {
+          title: 'Hora de tomar o medicamento',
+          body: `${nome} - ${dose}`,
+          android: { channelId: 'medicamentos', smallIcon: 'ic_launcher' },
+        },
+        {
+          type: TriggerType.TIMESTAMP,
+          timestamp: dataNotificacao.getTime(),
+          repeatFrequency: RepeatFrequency.DAILY,
+        }
+      );
+    } catch (err) {
+      console.error('Erro ao agendar notificação:', err);
+      Alert.alert('Erro ao agendar notificação');
+    }
+  };
+
   const handleSalvar = async () => {
     const usuario = auth().currentUser;
-    if (!usuario || !nome || !dose || !horario) {
-      Alert.alert('Erro', 'Preencha os campos obrigatórios');
+    if (!usuario || !nome.trim() || !dose.trim()) {
+      Alert.alert('Erro', 'Preencha todos os campos obrigatórios');
       return;
     }
 
-    const medicamento = {
-      userid: usuario.uid,
-      Nome: nome,
-      Dose: dose,
-      Observações: observacoes,
-      Horário: horario.toTimeString().slice(0, 5),
-    };
+    const medicamento = prepararDados(usuario.uid);
 
     try {
       if (editar && dados?.id) {
@@ -54,30 +100,22 @@ const CadastrarMedicamento = ({ route, navigation }) => {
         await firestore().collection('medicamentos').add(medicamento);
       }
 
-      if (notificar) {
-        await notifee.createTriggerNotification(
-          {
-            title: 'Hora de tomar o medicamento',
-            body: `${nome} - ${dose}`,
-            android: { channelId: 'medicamentos' },
-          },
-          {
-            type: notifee.TriggerType.TIMESTAMP,
-            timestamp: horario.getTime(),
-          }
-        );
-      }
+      if (notificar) await agendarNotificacao();
 
       Alert.alert('Sucesso', editar ? 'Medicamento atualizado!' : 'Medicamento cadastrado!');
       navigation.goBack();
     } catch (error) {
-      console.error('Erro:', error);
-      Alert.alert('Erro ao salvar');
+      console.error('Erro ao salvar medicamento:', error);
+      Alert.alert('Erro ao salvar os dados');
     }
   };
 
   const onChangeHorario = (_, selectedTime) => {
-    if (selectedTime) setHorario(selectedTime);
+    if (selectedTime) {
+      selectedTime.setSeconds(0);
+      selectedTime.setMilliseconds(0);
+      setHorario(selectedTime);
+    }
     setMostrarHorario(false);
   };
 
@@ -95,7 +133,7 @@ const CadastrarMedicamento = ({ route, navigation }) => {
       />
 
       <TouchableOpacity onPress={() => setMostrarHorario(true)} style={styles.horarioButton}>
-        <Text style={styles.horarioText}>{`Horário: ${horario.toTimeString().slice(0, 5)}`}</Text>
+        <Text style={styles.horarioText}>{`Horário: ${formatarHorario(horario)}`}</Text>
       </TouchableOpacity>
 
       {mostrarHorario && (
