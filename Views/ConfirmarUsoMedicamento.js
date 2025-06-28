@@ -1,13 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  Switch,
-  Alert,
-  TouchableOpacity,
-  ScrollView,
+import { View, Text, StyleSheet, TextInput, Switch, Alert, TouchableOpacity, ScrollView,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import firestore from '@react-native-firebase/firestore';
