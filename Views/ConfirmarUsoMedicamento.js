@@ -1,19 +1,37 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TextInput, Switch, Alert, TouchableOpacity, ScrollView,
+import {
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  Switch,
+  Alert,
+  TouchableOpacity,
+  ScrollView,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
+import { useConfiguracoes } from './Configuracoes';
 
 const ConfirmarUsoMedicamento = ({ route, navigation }) => {
   const editar = route.params?.editar || false;
   const dados = route.params?.dados || route.params?.medicamento;
 
   const [listaMedicamentos, setListaMedicamentos] = useState([]);
-  const [medicamentoSelecionado, setMedicamentoSelecionado] = useState(dados.id);
-  const [dose, setDose] = useState(dados.Dose?.toString() || '0');
+  const [medicamentoSelecionado, setMedicamentoSelecionado] = useState(
+    dados.medicamentoId || dados.id
+  );
+  const [dose, setDose] = useState(
+    dados.Dose?.toString() || dados.dose?.toString() || '0'
+  );
   const [tomou, setTomou] = useState(dados?.tomou ?? true);
   const [observacoes, setObservacoes] = useState(dados?.observacoes || '');
+
+  const { config, temas, tamanhosFonte } = useConfiguracoes();
+  const tema = temas[config.tema];
+  const fonte = tamanhosFonte[config.fonte];
+  const styles = criarEstilos(tema, fonte);
 
   useEffect(() => {
     const carregarMedicamentos = async () => {
@@ -26,7 +44,7 @@ const ConfirmarUsoMedicamento = ({ route, navigation }) => {
           .where('userid', '==', userId)
           .get();
 
-        const meds = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const meds = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
         setListaMedicamentos(meds);
       } catch (error) {
         console.error('Erro ao carregar medicamentos:', error);
@@ -41,7 +59,7 @@ const ConfirmarUsoMedicamento = ({ route, navigation }) => {
     if (!tomou) {
       setDose('0');
     } else {
-      const med = listaMedicamentos.find(m => m.id === medicamentoSelecionado);
+      const med = listaMedicamentos.find((m) => m.id === medicamentoSelecionado);
       if (med) setDose(med.Dose?.toString() || '0');
     }
   }, [tomou, medicamentoSelecionado]);
@@ -53,9 +71,10 @@ const ConfirmarUsoMedicamento = ({ route, navigation }) => {
       return;
     }
 
-    const medicamentoSelecionadoObj = listaMedicamentos.find(
-      m => m.id === medicamentoSelecionado
-    );
+    const medicamentoSelecionadoObj =
+      listaMedicamentos.find((m) => m.id === medicamentoSelecionado) || {
+        Nome: dados.NomeMedicamento || 'Desconhecido',
+      };
 
     const registro = {
       usuarioId: userId,
@@ -94,10 +113,10 @@ const ConfirmarUsoMedicamento = ({ route, navigation }) => {
         <Picker
           selectedValue={medicamentoSelecionado}
           onValueChange={(itemValue) => setMedicamentoSelecionado(itemValue)}
-          dropdownIconColor="#fff"
-          style={{ color: '#fff' }}
+          dropdownIconColor={tema.texto}
+          style={{ color: tema.texto }}
         >
-          {listaMedicamentos.map(med => (
+          {listaMedicamentos.map((med) => (
             <Picker.Item key={med.id} label={med.Nome} value={med.id} />
           ))}
         </Picker>
@@ -120,6 +139,8 @@ const ConfirmarUsoMedicamento = ({ route, navigation }) => {
         value={dose}
         onChangeText={setDose}
         editable={tomou}
+        placeholder="Digite a dose"
+        placeholderTextColor={tema.texto + '88'}
       />
 
       <Text style={styles.label}>Observações (opcional):</Text>
@@ -129,10 +150,13 @@ const ConfirmarUsoMedicamento = ({ route, navigation }) => {
         value={observacoes}
         onChangeText={setObservacoes}
         multiline
+        placeholderTextColor={tema.texto + '88'}
       />
 
       <TouchableOpacity style={styles.botaoSalvar} onPress={salvarRegistro}>
-        <Text style={styles.botaoTexto}>{editar ? 'Salvar Alterações' : 'Salvar Registro'}</Text>
+        <Text style={styles.botaoTexto}>
+          {editar ? 'Salvar Alterações' : 'Salvar Registro'}
+        </Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -140,51 +164,53 @@ const ConfirmarUsoMedicamento = ({ route, navigation }) => {
 
 export default ConfirmarUsoMedicamento;
 
-const styles = StyleSheet.create({
-  container: {
-    flexGrow: 1,
-    backgroundColor: '#001f3f',
-    padding: 20,
-  },
-  titulo: {
-    fontSize: 22,
-    color: '#fff',
-    fontWeight: 'bold',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  label: {
-    color: '#fff',
-    fontSize: 16,
-    marginBottom: 8,
-  },
-  pickerContainer: {
-    backgroundColor: '#007AFF',
-    borderRadius: 8,
-    marginBottom: 20,
-  },
-  switchContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginVertical: 20,
-  },
-  input: {
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    padding: 10,
-    marginBottom: 20,
-    fontSize: 16,
-  },
-  botaoSalvar: {
-    backgroundColor: '#28a745',
-    padding: 15,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  botaoTexto: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-});
+const criarEstilos = (tema, fontSize) =>
+  StyleSheet.create({
+    container: {
+      flexGrow: 1,
+      backgroundColor: tema.fundo,
+      padding: 20,
+    },
+    titulo: {
+      fontSize: fontSize + 6,
+      color: tema.texto,
+      fontWeight: 'bold',
+      marginBottom: 20,
+      textAlign: 'center',
+    },
+    label: {
+      color: tema.texto,
+      fontSize: fontSize,
+      marginBottom: 8,
+    },
+    pickerContainer: {
+      backgroundColor: tema.botaoFundo,
+      borderRadius: 8,
+      marginBottom: 20,
+    },
+    switchContainer: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginVertical: 20,
+    },
+    input: {
+      backgroundColor: '#fff',
+      borderRadius: 8,
+      padding: 10,
+      marginBottom: 20,
+      fontSize: fontSize,
+      color: '#000',
+    },
+    botaoSalvar: {
+      backgroundColor: '#28a745',
+      padding: 15,
+      borderRadius: 10,
+      alignItems: 'center',
+    },
+    botaoTexto: {
+      color: '#fff',
+      fontSize: fontSize,
+      fontWeight: 'bold',
+    },
+  });

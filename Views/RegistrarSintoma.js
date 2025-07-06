@@ -4,6 +4,7 @@ import {
 } from 'react-native';
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
+import { useConfiguracoes, tamanhosFonte } from './Configuracoes';
 
 const sintomasListados = [
   'Tontura', 'Visão turva', 'Dor de cabeça', 'Suor excessivo',
@@ -17,9 +18,16 @@ const RegistrarSintoma = ({ route, navigation }) => {
   const [intensidade, setIntensidade] = useState('moderada');
   const [anotacao, setAnotacao] = useState('');
 
+  const { config, temas } = useConfiguracoes();
+  const tema = temas[config.tema];
+  const fonte = tamanhosFonte[config.fonte];
+  const styles = criarEstilos(tema, fonte);
+
   useEffect(() => {
     if (sintomaEdicao) {
-      setSintomasSelecionados(Array.isArray(sintomaEdicao.sintoma) ? sintomaEdicao.sintoma : [sintomaEdicao.sintoma]);
+      setSintomasSelecionados(
+        Array.isArray(sintomaEdicao.sintoma) ? sintomaEdicao.sintoma : [sintomaEdicao.sintoma]
+      );
       setIntensidade(sintomaEdicao.intensidade || 'moderada');
       setAnotacao(sintomaEdicao.anotacao || '');
     }
@@ -71,18 +79,23 @@ const RegistrarSintoma = ({ route, navigation }) => {
 
       <Text style={styles.label}>Selecione os sintomas:</Text>
       <View style={styles.sintomasContainer}>
-        {sintomasListados.map((item) => (
-          <TouchableOpacity
-            key={item}
-            onPress={() => toggleSintoma(item)}
-            style={[
-              styles.sintomaButton,
-              sintomasSelecionados.includes(item) && styles.sintomaSelecionado,
-            ]}
-          >
-            <Text style={{ color: sintomasSelecionados.includes(item) ? '#fff' : '#000' }}>{item}</Text>
-          </TouchableOpacity>
-        ))}
+        {sintomasListados.map((item) => {
+          const selecionado = sintomasSelecionados.includes(item);
+          return (
+            <TouchableOpacity
+              key={item}
+              onPress={() => toggleSintoma(item)}
+              style={[
+                styles.sintomaButton,
+                selecionado && styles.sintomaSelecionado,
+              ]}
+            >
+              <Text style={[styles.sintomaTexto, { color: selecionado ? '#fff' : tema.texto }]}>
+                {item}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
 
       <Text style={styles.label}>Intensidade:</Text>
@@ -108,10 +121,11 @@ const RegistrarSintoma = ({ route, navigation }) => {
         value={anotacao}
         onChangeText={setAnotacao}
         multiline
+        placeholderTextColor={tema.texto + '99'}
       />
 
       <View style={{ marginTop: 30 }}>
-        <Button title="Salvar" onPress={handleSalvar} color="#007AFF" />
+        <Button title="Salvar" onPress={handleSalvar} color={tema.botaoFundo} />
       </View>
     </ScrollView>
   );
@@ -119,22 +133,22 @@ const RegistrarSintoma = ({ route, navigation }) => {
 
 export default RegistrarSintoma;
 
-const styles = StyleSheet.create({
+const criarEstilos = (tema, fonte) => StyleSheet.create({
   container: {
     padding: 20,
-    backgroundColor: '#001f3f',
+    backgroundColor: tema.fundo,
     flexGrow: 1,
   },
   title: {
-    fontSize: 22,
-    color: '#fff',
+    fontSize: fonte + 4,
+    color: tema.texto,
     fontWeight: 'bold',
     marginBottom: 20,
     textAlign: 'center',
   },
   label: {
-    color: '#fff',
-    fontSize: 16,
+    color: tema.texto,
+    fontSize: fonte,
     marginBottom: 10,
     marginTop: 10,
   },
@@ -143,6 +157,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 8,
+    fontSize: fonte,
+    color: '#000',
   },
   sintomasContainer: {
     flexDirection: 'row',
@@ -163,6 +179,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#007AFF',
     borderColor: '#fff',
   },
+  sintomaTexto: {
+    fontSize: fonte,
+  },
   buttonGroup: {
     flexDirection: 'row',
     justifyContent: 'space-around',
@@ -180,5 +199,6 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#fff',
     fontWeight: 'bold',
+    fontSize: fonte,
   },
 });

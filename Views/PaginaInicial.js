@@ -1,5 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, Dimensions } from 'react-native';
+import {
+  View, Text, StyleSheet, TouchableOpacity, Alert, Dimensions,
+} from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { LineChart } from 'react-native-chart-kit';
 import auth from '@react-native-firebase/auth';
@@ -7,6 +9,8 @@ import firestore from '@react-native-firebase/firestore';
 import notifee, { TriggerType, RepeatFrequency } from '@notifee/react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { buscarMedicoesUsuario } from '../firebaseService';
+import { analisarGlicemia } from '../services/analiseGlicemia';
+import { useConfiguracoes, temas, tamanhosFonte } from './Configuracoes'; // Importar contexto
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -14,6 +18,12 @@ const HomeScreen = () => {
   const navigation = useNavigation();
   const [labels, setLabels] = useState([]);
   const [glicemias, setGlicemias] = useState([]);
+  const [alertaRecente, setAlertaRecente] = useState(null);
+
+  // Pegar tema e fonte do contexto
+  const { config } = useConfiguracoes();
+  const tema = temas[config.tema] || temas.escuro;
+  const fonte = tamanhosFonte[config.fonte] || tamanhosFonte.media;
 
   const carregarMedicoes = async () => {
     try {
@@ -38,9 +48,18 @@ const HomeScreen = () => {
 
         setLabels(labelsAux);
         setGlicemias(valores);
+
+        // Buscar alerta recente
+        const alertas = analisarGlicemia(dados);
+        if (Array.isArray(alertas) && alertas.length > 0) {
+          setAlertaRecente(alertas[0]);
+        } else {
+          setAlertaRecente(null);
+        }
       } else {
         setLabels([]);
         setGlicemias([]);
+        setAlertaRecente(null);
       }
     } catch (error) {
       Alert.alert('Erro', 'Falha ao carregar medições: ' + error.message);
@@ -120,9 +139,12 @@ const HomeScreen = () => {
       {
         data: glicemias.length > 0 ? glicemias : [0],
         strokeWidth: 2,
+        color: (opacity = 1) => tema.botaoFundo, // Linha no gráfico com cor do tema
       },
     ],
   };
+
+  const styles = criarEstilos(tema, fonte);
 
   return (
     <View style={styles.container}>
@@ -134,12 +156,20 @@ const HomeScreen = () => {
           width={screenWidth - 30}
           height={220}
           chartConfig={{
-            backgroundColor: '#007AFF',
-            backgroundGradientFrom: '#007AFF',
-            backgroundGradientTo: '#001f3f',
+            backgroundColor: tema.botaoFundo,
+            backgroundGradientFrom: tema.botaoFundo,
+            backgroundGradientTo: tema.fundo,
             decimalPlaces: 0,
-            color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
-            labelColor: () => '#fff',
+            color: (opacity = 1) => tema.texto,
+            labelColor: () => tema.texto,
+            propsForDots: {
+              r: '4',
+              strokeWidth: '2',
+              stroke: tema.texto,
+            },
+            propsForBackgroundLines: {
+              stroke: tema.texto + '33', // linha de grade transparente
+            },
           }}
           bezier
           style={styles.chart}
@@ -147,10 +177,32 @@ const HomeScreen = () => {
       </TouchableOpacity>
 
       <TouchableOpacity
-        style={styles.fab}
-        onPress={() => navigation.navigate('InserirGlicemia')}
+        style={[
+          styles.alertaContainer,
+          { backgroundColor: alertaRecente?.startsWith('⚠️') ? '#ffc107' : tema.botaoFundo },
+        ]}
+        onPress={() => navigation.navigate('Relatorios')}
       >
-        <Icon name="add" size={24} color="#fff" />
+        <Text
+          style={[
+            styles.alertaTitulo,
+            { color: alertaRecente?.startsWith('⚠️') ? '#000' : tema.botaoTexto },
+          ]}
+        >
+          {alertaRecente?.startsWith('⚠️') ? '⚠️ Alerta Recente' : '✅ Sem alertas recentes'}
+        </Text>
+        <Text
+          style={[
+            styles.alertaTexto,
+            { color: alertaRecente?.startsWith('⚠️') ? '#000' : tema.botaoTexto },
+          ]}
+        >
+          {alertaRecente || 'Tudo sob controle nos últimos dias.'}
+        </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.fab} onPress={() => navigation.navigate('InserirGlicemia')}>
+        <Icon name="add" size={30} color="#fff" />
       </TouchableOpacity>
     </View>
   );
@@ -158,33 +210,51 @@ const HomeScreen = () => {
 
 export default HomeScreen;
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#001f3f',
-    padding: 20,
-  },
-  title: {
-    fontSize: 20,
-    color: '#fff',
-    fontWeight: 'bold',
-    marginBottom: 20,
-    marginTop: 10,
-    alignSelf: 'center',
-  },
-  chart: {
-    borderRadius: 16,
-  },
-  fab: {
-    position: 'absolute',
-    bottom: 30,
-    right: 30,
-    backgroundColor: '#007AFF',
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 5,
-  },
-});
+const criarEstilos = (tema, fonte) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: tema.fundo,
+      padding: 20,
+    },
+    title: {
+      fontSize: fonte + 2,
+      color: tema.texto,
+      fontWeight: 'bold',
+      marginBottom: 20,
+      marginTop: 10,
+      alignSelf: 'center',
+    },
+    chart: {
+      borderRadius: 16,
+    },
+    fab: {
+      position: 'absolute',
+      bottom: 30,
+      right: 30,
+      backgroundColor: tema.botaoFundo,
+      width: 60,
+      height: 60,
+      borderRadius: 30,
+      justifyContent: 'center',
+      alignItems: 'center',
+      elevation: 5,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.3,
+      shadowRadius: 3,
+    },
+    alertaContainer: {
+      marginTop: 20,
+      padding: 15,
+      borderRadius: 10,
+    },
+    alertaTitulo: {
+      fontWeight: 'bold',
+      fontSize: fonte,
+      marginBottom: 5,
+    },
+    alertaTexto: {
+      fontSize: fonte - 2,
+    },
+  });

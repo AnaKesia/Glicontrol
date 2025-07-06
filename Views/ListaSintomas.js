@@ -1,14 +1,22 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
+import {
+  View, Text, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity, Alert
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { buscarSintomasPorUsuario, buscarMedicaoPorId, deletarSintoma } from '../firebaseService';
 import { formatarData } from '../utils/dataUtils';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { useConfiguracoes } from './Configuracoes';
 
 const ListaSintomas = () => {
   const [sintomas, setSintomas] = useState([]);
   const [carregando, setCarregando] = useState(true);
   const navigation = useNavigation();
+
+  const { config, temas, tamanhosFonte } = useConfiguracoes();
+  const tema = temas[config.tema];
+  const tamanhoBase = tamanhosFonte[config.fonte];
+  const styles = criarEstilos(tema, tamanhoBase);
 
   const carregarDados = async () => {
     try {
@@ -23,12 +31,17 @@ const ListaSintomas = () => {
           } catch (e) {
             console.log('Erro ao buscar medição:', e);
           }
-
           return { ...s, valorGlicemia };
         })
       );
 
-      setSintomas(sintomasComGlicemia);
+      const sintomasOrdenados = sintomasComGlicemia.sort((a, b) => {
+        const dataA = a.timestamp?.toDate ? a.timestamp.toDate() : new Date(a.timestamp);
+        const dataB = b.timestamp?.toDate ? b.timestamp.toDate() : new Date(b.timestamp);
+        return dataB - dataA;
+      });
+
+      setSintomas(sintomasOrdenados);
     } catch (e) {
       console.error('Erro ao carregar sintomas:', e);
     } finally {
@@ -62,7 +75,7 @@ const ListaSintomas = () => {
   if (carregando) {
     return (
       <View style={styles.container}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <ActivityIndicator size="large" color={tema.botaoFundo} />
       </View>
     );
   }
@@ -75,11 +88,9 @@ const ListaSintomas = () => {
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <View style={styles.item}>
-            <Text style={styles.texto}>Sintomas: {(Array.isArray(item.sintoma) ? item.sintoma.join(', ') : item.sintoma)}</Text>
+            <Text style={styles.texto}>Sintomas: {Array.isArray(item.sintoma) ? item.sintoma.join(', ') : item.sintoma}</Text>
             <Text style={styles.texto}>Intensidade: {item.intensidade}</Text>
-            {item.anotacao ? (
-              <Text style={styles.texto}>Anotação: {item.anotacao}</Text>
-            ) : null}
+            {item.anotacao ? <Text style={styles.texto}>Anotação: {item.anotacao}</Text> : null}
             <Text style={styles.texto}>Glicemia: {item.valorGlicemia} mg/dL</Text>
             <Text style={styles.texto}>Data: {formatarData(item.timestamp)}</Text>
             <View style={styles.acoes}>
@@ -101,49 +112,51 @@ const ListaSintomas = () => {
 
 export default ListaSintomas;
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#001f3f',
-    padding: 20,
-  },
-  titulo: {
-    color: '#fff',
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginBottom: 20,
-    alignSelf: 'center',
-  },
-  item: {
-    backgroundColor: '#007AFF',
-    borderRadius: 10,
-    padding: 15,
-    marginBottom: 15,
-  },
-  texto: {
-    color: '#fff',
-    marginBottom: 5,
-  },
-  vazio: {
-    color: '#ccc',
-    fontSize: 18,
-    alignSelf: 'center',
-    marginTop: 30,
-  },
-  acoes: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginTop: 10,
-  },
-  botaoEditar: {
-    backgroundColor: '#28a745',
-    padding: 8,
-    borderRadius: 5,
-    marginRight: 10,
-  },
-  botaoExcluir: {
-    backgroundColor: '#dc3545',
-    padding: 8,
-    borderRadius: 5,
-  },
-});
+const criarEstilos = (tema, tamanhoBase) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: tema.fundo,
+      padding: 20,
+    },
+    titulo: {
+      color: tema.texto,
+      fontSize: tamanhoBase + 6,
+      fontWeight: 'bold',
+      marginBottom: 20,
+      alignSelf: 'center',
+    },
+    item: {
+      backgroundColor: tema.botaoFundo,
+      borderRadius: 10,
+      padding: 15,
+      marginBottom: 15,
+    },
+    texto: {
+      color: tema.botaoTexto,
+      fontSize: tamanhoBase,
+      marginBottom: 5,
+    },
+    vazio: {
+      color: tema.texto,
+      fontSize: tamanhoBase + 2,
+      alignSelf: 'center',
+      marginTop: 30,
+    },
+    acoes: {
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+      marginTop: 10,
+    },
+    botaoEditar: {
+      backgroundColor: '#28a745',
+      padding: 8,
+      borderRadius: 5,
+      marginRight: 10,
+    },
+    botaoExcluir: {
+      backgroundColor: '#dc3545',
+      padding: 8,
+      borderRadius: 5,
+    },
+  });

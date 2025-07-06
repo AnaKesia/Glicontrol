@@ -8,10 +8,15 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 
 import { GlicemiaService } from '../services/GlicemiaService';
 import { validarMedicao } from '../utils/validacao';
+import { useConfiguracoes, tamanhosFonte } from './Configuracoes';  // Importa tamanhosFonte
 
 const glicemiaService = new GlicemiaService();
 
 const InserirGlicemiaScreen = () => {
+  const { config, temas } = useConfiguracoes();
+  const tema = temas[config.tema];
+  const fonte = tamanhosFonte[config.fonte];  // Pega o tamanho da fonte
+
   const [valor, setValor] = useState('');
   const [categoria, setCategoria] = useState('jejum');
   const [dataHora, setDataHora] = useState(new Date());
@@ -59,6 +64,8 @@ const InserirGlicemiaScreen = () => {
     }
   };
 
+  const styles = criarEstilos(tema, fonte);
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>{medicao ? 'Editar Medição' : 'Nova Medição'}</Text>
@@ -66,6 +73,7 @@ const InserirGlicemiaScreen = () => {
       <TextInput
         style={styles.input}
         placeholder="Valor da glicemia (mg/dL)"
+        placeholderTextColor={tema.placeholder}
         keyboardType="numeric"
         value={valor}
         onChangeText={setValor}
@@ -75,6 +83,7 @@ const InserirGlicemiaScreen = () => {
         selectedValue={categoria}
         style={styles.input}
         onValueChange={setCategoria}
+        dropdownIconColor={tema.texto}
       >
         <Picker.Item label="Jejum" value="jejum" />
         <Picker.Item label="Pós-Café" value="pos-cafe" />
@@ -105,6 +114,7 @@ const InserirGlicemiaScreen = () => {
       <TextInput
         style={[styles.input, { height: 80 }]}
         placeholder="Observações (opcional)"
+        placeholderTextColor={tema.placeholder}
         multiline
         value={observacao}
         onChangeText={setObservacao}
@@ -115,6 +125,7 @@ const InserirGlicemiaScreen = () => {
       <Button
         title={medicao ? 'Salvar Alterações' : 'Salvar Medição'}
         onPress={handleSalvar}
+        color={tema.botaoFundo}
       />
     </View>
   );
@@ -122,28 +133,31 @@ const InserirGlicemiaScreen = () => {
 
 export default InserirGlicemiaScreen;
 
-const styles = StyleSheet.create({
+const criarEstilos = (tema, fonte) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#001f3f',
+    backgroundColor: tema.fundo,
     padding: 20,
     justifyContent: 'center',
   },
   title: {
-    fontSize: 24,
-    color: '#fff',
+    fontSize: fonte + 6,  // título maior que a fonte base
+    color: tema.texto,
     marginBottom: 20,
     textAlign: 'center',
   },
   input: {
-    backgroundColor: '#fff',
+    backgroundColor: tema.inputFundo || '#fff',
+    color: tema.texto,
+    fontSize: fonte,   // tamanho da fonte dinâmico aqui
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 10,
     marginBottom: 15,
   },
   horaSelecionada: {
-    color: '#fff',
+    color: tema.texto,
+    fontSize: fonte,
     marginBottom: 15,
     textAlign: 'center',
   },

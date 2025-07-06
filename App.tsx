@@ -17,6 +17,11 @@ import RegistrarSintoma from './Views/RegistrarSintoma';
 import ListaSintomas from './Views/ListaSintomas';
 import ConfirmarUsoMedicamento from './Views/ConfirmarUsoMedicamento';
 import ListaUsoMedicamento from './Views/ListaUsoMedicamento';
+import Relatorios from './Views/Relatorios';
+import RelatorioCompleto from './Views/RelatorioCompleto';
+import TelaConfiguracoes from './Views/TelaConfiguracoes';
+import { ConfiguracoesProvider } from './Views/Configuracoes';
+
 import 'react-native-gesture-handler';
 
 const Stack = createNativeStackNavigator();
@@ -46,29 +51,34 @@ export default function App() {
   if (initializing) return null;
 
   return (
-    <NavigationContainer>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {user ? (
-          <>
-            <Stack.Screen name="HomeDrawer" component={DrawerNavigator} />
-            <Stack.Screen name="PaginaInicial" component={PaginaInicial} />
-            <Stack.Screen name="InserirGlicemia" component={InserirGlicemia} />
-            <Stack.Screen name="CadastrarMedicamento" component={CadastrarMedicamento} />
-            <Stack.Screen name="ListaMedicoes" component={ListaMedicoes} />
-            <Stack.Screen name="ListaRefeicoes" component={ListaRefeicoes} />
-            <Stack.Screen name="InserirRefeicao" component={InserirRefeicao} />
-            <Stack.Screen name="RegistrarSintoma" component={RegistrarSintoma} />
-            <Stack.Screen name="ListaSintomas" component={ListaSintomas} />
-            <Stack.Screen name="ConfirmarUsoMedicamento" component={ConfirmarUsoMedicamento} />
-            <Stack.Screen name="ListaUsoMedicamento" component={ListaUsoMedicamento} />
-          </>
-        ) : (
-          <>
-            <Stack.Screen name="Login" component={LoginScreen} />
-            <Stack.Screen name="Registro" component={RegisterScreen} />
-          </>
-        )}
-      </Stack.Navigator>
-    </NavigationContainer>
+    <ConfiguracoesProvider>
+      <NavigationContainer>
+        <Stack.Navigator screenOptions={{ headerShown: false }}>
+          {user ? (
+            <>
+              <Stack.Screen name="HomeDrawer" component={DrawerNavigator} />
+              <Stack.Screen name="PaginaInicial" component={PaginaInicial} />
+              <Stack.Screen name="InserirGlicemia" component={InserirGlicemia} />
+              <Stack.Screen name="CadastrarMedicamento" component={CadastrarMedicamento} />
+              <Stack.Screen name="ListaMedicoes" component={ListaMedicoes} />
+              <Stack.Screen name="ListaRefeicoes" component={ListaRefeicoes} />
+              <Stack.Screen name="InserirRefeicao" component={InserirRefeicao} />
+              <Stack.Screen name="RegistrarSintoma" component={RegistrarSintoma} />
+              <Stack.Screen name="ListaSintomas" component={ListaSintomas} />
+              <Stack.Screen name="ConfirmarUsoMedicamento" component={ConfirmarUsoMedicamento} />
+              <Stack.Screen name="ListaUsoMedicamento" component={ListaUsoMedicamento} />
+              <Stack.Screen name="Relatorios" component={Relatorios} />
+              <Stack.Screen name="RelatorioCompleto" component={RelatorioCompleto} />
+              <Stack.Screen name="TelaConfiguracoes" component={TelaConfiguracoes} />
+            </>
+          ) : (
+            <>
+              <Stack.Screen name="Login" component={LoginScreen} />
+              <Stack.Screen name="Registro" component={RegisterScreen} />
+            </>
+          )}
+        </Stack.Navigator>
+      </NavigationContainer>
+    </ConfiguracoesProvider>
   );
 }

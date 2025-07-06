@@ -6,8 +6,13 @@ import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { format } from 'date-fns';
+import { useConfiguracoes, tamanhosFonte } from './Configuracoes';
 
 const ListaUsoMedicamento = ({ navigation }) => {
+  const { config, temas } = useConfiguracoes();
+  const tema = temas[config.tema];
+  const tamanhoFonte = tamanhosFonte[config.fonte];
+
   const [registros, setRegistros] = useState([]);
   const [carregando, setCarregando] = useState(true);
 
@@ -50,7 +55,6 @@ const ListaUsoMedicamento = ({ navigation }) => {
         onPress: async () => {
           try {
             await firestore().collection('usoMedicamentos').doc(id).delete();
-            // Remove localmente para atualizar a lista instantaneamente
             setRegistros(prev => prev.filter(item => item.id !== id));
           } catch (err) {
             console.error('Erro ao excluir:', err);
@@ -60,6 +64,8 @@ const ListaUsoMedicamento = ({ navigation }) => {
       },
     ]);
   };
+
+  const styles = criarEstilos(tema, tamanhoFonte, config.tema);
 
   const renderItem = ({ item }) => {
     let dataTexto = 'Data inválida';
@@ -73,18 +79,10 @@ const ListaUsoMedicamento = ({ navigation }) => {
 
     return (
       <View style={styles.item}>
-        <Text style={styles.texto}>
-          <Text style={styles.bold}>Medicamento:</Text> {item.NomeMedicamento || 'Desconhecido'}
-        </Text>
-        <Text style={styles.texto}>
-          <Text style={styles.bold}>Dose:</Text> {item.dose ?? '-'}
-        </Text>
-        <Text style={styles.texto}>
-          <Text style={styles.bold}>Tomado:</Text> {item.tomou ? 'Sim' : 'Não'}
-        </Text>
-        <Text style={styles.texto}>
-          <Text style={styles.bold}>Data:</Text> {dataTexto}
-        </Text>
+        <Text style={styles.texto}><Text style={styles.bold}>Medicamento:</Text> {item.NomeMedicamento || 'Desconhecido'}</Text>
+        <Text style={styles.texto}><Text style={styles.bold}>Dose:</Text> {item.dose ?? '-'}</Text>
+        <Text style={styles.texto}><Text style={styles.bold}>Tomado:</Text> {item.tomou ? 'Sim' : 'Não'}</Text>
+        <Text style={styles.texto}><Text style={styles.bold}>Data:</Text> {dataTexto}</Text>
 
         {item.observacoes?.trim() ? (
           <Text style={styles.texto}>
@@ -97,7 +95,7 @@ const ListaUsoMedicamento = ({ navigation }) => {
             style={styles.botaoEditar}
             onPress={() => navigation.navigate('ConfirmarUsoMedicamento', { editar: true, dados: item })}
           >
-            <Icon name="edit" size={20} color="#007AFF" />
+            <Icon name="edit" size={20} color={tema.texto} />
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.botaoExcluir}
@@ -110,11 +108,10 @@ const ListaUsoMedicamento = ({ navigation }) => {
     );
   };
 
-
   if (carregando) {
     return (
       <View style={styles.carregando}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <ActivityIndicator size="large" color={tema.botaoFundo} />
       </View>
     );
   }
@@ -133,19 +130,46 @@ const ListaUsoMedicamento = ({ navigation }) => {
 
 export default ListaUsoMedicamento;
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#001f3f', padding: 16 },
-  item: {
-    backgroundColor: '#007AFF',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 12,
-  },
-  texto: { color: '#fff', marginBottom: 4 },
-  bold: { fontWeight: 'bold' },
-  botoes: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 8 },
-  botaoEditar: { padding: 6, backgroundColor: '#fff', borderRadius: 6 },
-  botaoExcluir: { padding: 6, backgroundColor: '#dc3545', borderRadius: 6 },
-  vazio: { color: '#ccc', fontSize: 16, textAlign: 'center', marginTop: 30 },
-  carregando: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-});
+const criarEstilos = (tema, fontSize, nomeTema) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: tema.fundo, padding: 16 },
+    item: {
+      backgroundColor: nomeTema === 'claro' ? '#99ccff' : tema.botaoFundo,
+      padding: 12,
+      borderRadius: 8,
+      marginBottom: 12,
+    },
+    texto: {
+      color: tema.botaoTexto,
+      fontSize,
+      marginBottom: 4,
+    },
+    bold: { fontWeight: 'bold' },
+    botoes: {
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+      gap: 8,
+      marginTop: 8,
+    },
+    botaoEditar: {
+      padding: 6,
+      backgroundColor: tema.fundo,
+      borderRadius: 6,
+    },
+    botaoExcluir: {
+      padding: 6,
+      backgroundColor: '#dc3545',
+      borderRadius: 6,
+    },
+    vazio: {
+      color: tema.texto + 'bb',
+      fontSize,
+      textAlign: 'center',
+      marginTop: 30,
+    },
+    carregando: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+  });

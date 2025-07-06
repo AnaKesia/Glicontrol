@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, Button, Alert, StyleSheet,
-  TouchableOpacity, Platform, Switch
+  TouchableOpacity, Platform, Switch, ScrollView
 } from 'react-native';
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
@@ -15,9 +15,12 @@ const CadastrarMedicamento = ({ route, navigation }) => {
   const [nome, setNome] = useState('');
   const [dose, setDose] = useState('');
   const [observacoes, setObservacoes] = useState('');
-  const [horario, setHorario] = useState(new Date());
-  const [mostrarHorario, setMostrarHorario] = useState(false);
   const [notificar, setNotificar] = useState(false);
+
+  const [modoNotificacao, setModoNotificacao] = useState('horarios'); // 'horarios' ou 'intervalo'
+  const [horarios, setHorarios] = useState([new Date()]);
+  const [mostrarIndex, setMostrarIndex] = useState(null);
+  const [intervaloHoras, setIntervaloHoras] = useState('');
 
   useEffect(() => {
     if (editar && dados) {
@@ -26,27 +29,44 @@ const CadastrarMedicamento = ({ route, navigation }) => {
       setObservacoes(dados.Observações || '');
       setNotificar(dados.Notificar || false);
 
-      const [hora, minuto] = dados.Horário.split(':').map(Number);
-      const novaHora = new Date();
-      novaHora.setHours(hora);
-      novaHora.setMinutes(minuto);
-      novaHora.setSeconds(0);
-      novaHora.setMilliseconds(0);
-      setHorario(novaHora);
+      if (dados.Horarios) {
+        const lista = dados.Horarios.map(h => {
+          const [hora, minuto] = h.split(':').map(Number);
+          const nova = new Date();
+          nova.setHours(hora);
+          nova.setMinutes(minuto);
+          nova.setSeconds(0);
+          nova.setMilliseconds(0);
+          return nova;
+        });
+        setHorarios(lista);
+        setModoNotificacao('horarios');
+      } else if (dados.IntervaloHoras) {
+        setIntervaloHoras(String(dados.IntervaloHoras));
+        setModoNotificacao('intervalo');
+      } else if (dados.Horário) {
+        const [hora, minuto] = dados.Horário.split(':').map(Number);
+        const nova = new Date();
+        nova.setHours(hora);
+        nova.setMinutes(minuto);
+        nova.setSeconds(0);
+        nova.setMilliseconds(0);
+        setHorarios([nova]);
+        setModoNotificacao('horarios');
+      }
     }
   }, [editar, dados]);
 
-  const formatarHorario = (date) => {
-    return date.toTimeString().slice(0, 5);
-  };
+  const formatarHorario = (date) => date.toTimeString().slice(0, 5);
 
   const prepararDados = (uid) => ({
     userid: uid,
     Nome: nome.trim(),
     Dose: dose.trim(),
     Observações: observacoes.trim(),
-    Horário: formatarHorario(horario),
-    Notificar: notificar,  // <<< Aqui salva o campo
+    Notificar: notificar,
+    Horarios: modoNotificacao === 'horarios' ? horarios.map(formatarHorario) : null,
+    IntervaloHoras: modoNotificacao === 'intervalo' ? parseInt(intervaloHoras) : null,
   });
 
   const agendarNotificacao = async () => {
@@ -58,26 +78,58 @@ const CadastrarMedicamento = ({ route, navigation }) => {
       });
 
       const agora = new Date();
-      let dataNotificacao = new Date(horario);
-      dataNotificacao.setSeconds(0);
-      dataNotificacao.setMilliseconds(0);
 
-      if (dataNotificacao <= agora) {
-        dataNotificacao.setDate(dataNotificacao.getDate() + 1);
+      if (modoNotificacao === 'horarios') {
+        for (const h of horarios) {
+          const data = new Date(h);
+          if (data <= agora) data.setDate(data.getDate() + 1);
+
+          await notifee.createTriggerNotification(
+            {
+              title: 'Hora de tomar o medicamento',
+              body: `${nome} - ${dose}`,
+              android: { channelId: 'medicamentos', smallIcon: 'ic_launcher' },
+            },
+            {
+              type: TriggerType.TIMESTAMP,
+              timestamp: data.getTime(),
+              repeatFrequency: RepeatFrequency.DAILY,
+            }
+          );
+        }
       }
 
-      await notifee.createTriggerNotification(
-        {
-          title: 'Hora de tomar o medicamento',
-          body: `${nome} - ${dose}`,
-          android: { channelId: 'medicamentos', smallIcon: 'ic_launcher' },
-        },
-        {
-          type: TriggerType.TIMESTAMP,
-          timestamp: dataNotificacao.getTime(),
-          repeatFrequency: RepeatFrequency.DAILY,
+      else if (modoNotificacao === 'intervalo') {
+        const horas = parseInt(intervaloHoras);
+        const base = new Date();
+        base.setHours(0, 0, 0, 0); // meia-noite de hoje
+
+        const notificacoes = [];
+
+        for (let i = 0; i < 24; i += horas) {
+          const data = new Date(base);
+          data.setHours(i);
+
+          if (data > agora) {
+            notificacoes.push(data);
+          }
         }
-      );
+
+        for (const data of notificacoes) {
+          await notifee.createTriggerNotification(
+            {
+              title: 'Lembrete de medicamento',
+              body: `${nome} - repetir a cada ${horas}h`,
+              android: { channelId: 'medicamentos', smallIcon: 'ic_launcher' },
+            },
+            {
+              type: TriggerType.TIMESTAMP,
+              timestamp: data.getTime(),
+              repeatFrequency: RepeatFrequency.DAILY,
+            }
+          );
+        }
+      }
     } catch (err) {
       console.error('Erro ao agendar notificação:', err);
       Alert.alert('Erro ao agendar notificação');
@@ -110,17 +162,19 @@ const CadastrarMedicamento = ({ route, navigation }) => {
     }
   };
 
-  const onChangeHorario = (_, selectedTime) => {
+  const atualizarHorario = (index, selectedTime) => {
     if (selectedTime) {
+      const novos = [...horarios];
       selectedTime.setSeconds(0);
       selectedTime.setMilliseconds(0);
-      setHorario(selectedTime);
+      novos[index] = selectedTime;
+      setHorarios(novos);
     }
-    setMostrarHorario(false);
+    setMostrarIndex(null);
   };
 
   return (
-    <View style={styles.container}>
+    <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>{editar ? 'Editar Medicamento' : 'Cadastrar Medicamento'}</Text>
 
       <TextInput style={styles.input} placeholder="Nome" value={nome} onChangeText={setNome} />
@@ -132,37 +186,81 @@ const CadastrarMedicamento = ({ route, navigation }) => {
         onChangeText={setObservacoes}
       />
 
-      <TouchableOpacity onPress={() => setMostrarHorario(true)} style={styles.horarioButton}>
-        <Text style={styles.horarioText}>{`Horário: ${formatarHorario(horario)}`}</Text>
-      </TouchableOpacity>
-
-      {mostrarHorario && (
-        <DateTimePicker
-          value={horario}
-          mode="time"
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-          onChange={onChangeHorario}
-        />
-      )}
-
       <View style={styles.switchContainer}>
         <Text style={styles.switchLabel}>Deseja ser notificado?</Text>
         <Switch value={notificar} onValueChange={setNotificar} />
       </View>
+
+      {notificar && (
+        <>
+          <View style={styles.switchContainer}>
+            <Text style={styles.switchLabel}>Modo:</Text>
+            <TouchableOpacity onPress={() => setModoNotificacao('horarios')}>
+              <Text style={{ color: modoNotificacao === 'horarios' ? '#fff' : '#ccc' }}>Horários</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setModoNotificacao('intervalo')}>
+              <Text style={{ color: modoNotificacao === 'intervalo' ? '#fff' : '#ccc' }}>A cada X horas</Text>
+            </TouchableOpacity>
+          </View>
+
+          {modoNotificacao === 'horarios' ? (
+            <>
+              {horarios.map((h, i) => (
+                <TouchableOpacity
+                  key={i}
+                  onPress={() => setMostrarIndex(i)}
+                  style={styles.horarioButton}
+                >
+                  <Text style={styles.horarioText}>Horário {i + 1}: {formatarHorario(h)}</Text>
+                </TouchableOpacity>
+              ))}
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 }}>
+                <Button
+                  title="Adicionar horário"
+                  onPress={() => setHorarios([...horarios, new Date()])}
+                />
+                {horarios.length > 1 && (
+                  <Button
+                    title="Remover último"
+                    color="red"
+                    onPress={() => setHorarios(horarios.slice(0, -1))}
+                  />
+                )}
+              </View>
+              {mostrarIndex !== null && (
+                <DateTimePicker
+                  value={horarios[mostrarIndex]}
+                  mode="time"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  onChange={(_, date) => atualizarHorario(mostrarIndex, date)}
+                />
+              )}
+            </>
+          ) : (
+            <TextInput
+              style={styles.input}
+              placeholder="A cada quantas horas?"
+              value={intervaloHoras}
+              onChangeText={setIntervaloHoras}
+              keyboardType="numeric"
+            />
+          )}
+        </>
+      )}
 
       <Button
         title={editar ? 'Salvar Alterações' : 'Salvar Medicamento'}
         onPress={handleSalvar}
         color="#007AFF"
       />
-    </View>
+    </ScrollView>
   );
 };
 
 export default CadastrarMedicamento;
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: '#001f3f' },
+  container: { padding: 20, backgroundColor: '#001f3f' },
   title: { color: '#fff', fontSize: 24, textAlign: 'center', marginBottom: 20 },
   input: {
     backgroundColor: '#fff',
@@ -175,7 +273,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     padding: 12,
     borderRadius: 8,
-    marginBottom: 15,
+    marginBottom: 10,
   },
   horarioText: { color: '#000' },
   switchContainer: {

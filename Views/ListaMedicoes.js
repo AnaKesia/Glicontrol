@@ -4,10 +4,16 @@ import { useNavigation } from '@react-navigation/native';
 import { buscarMedicoesUsuario, deletarMedicao } from '../firebaseService';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { formatarData } from '../utils/dataUtils';
+import { useConfiguracoes, tamanhosFonte } from './Configuracoes';
 
 const ListaMedicoes = () => {
   const navigation = useNavigation();
   const [medicoes, setMedicoes] = useState([]);
+
+  const { config, temas } = useConfiguracoes();
+  const tema = temas[config.tema];
+  const fonteBase = tamanhosFonte[config.fonte];
+  const styles = criarEstilos(tema, fonteBase);
 
   const carregarMedicoes = useCallback(async () => {
     const dados = await buscarMedicoesUsuario();
@@ -33,7 +39,15 @@ const ListaMedicoes = () => {
     return unsubscribe;
   }, [navigation, carregarMedicoes]);
 
-  const renderItem = ({ item }) => <ItemMedicao item={item} onEditar={() => navigation.navigate('InserirGlicemia', { medicao: item })} onExcluir={() => confirmarRemocao(item.id)} />;
+  const renderItem = ({ item }) => (
+    <ItemMedicao
+      item={item}
+      onEditar={() => navigation.navigate('InserirGlicemia', { medicao: item })}
+      onExcluir={() => confirmarRemocao(item.id)}
+      tema={tema}
+      fonteBase={fonteBase}
+    />
+  );
 
   return (
     <View style={styles.container}>
@@ -49,8 +63,9 @@ const ListaMedicoes = () => {
   );
 };
 
-const ItemMedicao = ({ item, onEditar, onExcluir }) => {
+const ItemMedicao = ({ item, onEditar, onExcluir, tema, fonteBase }) => {
   const navigation = useNavigation();
+  const styles = criarEstilos(tema, fonteBase);
 
   const irParaSintomas = () => {
     navigation.navigate('RegistrarSintoma', { glicemiaId: item.id });
@@ -79,50 +94,46 @@ const ItemMedicao = ({ item, onEditar, onExcluir }) => {
 
 export default ListaMedicoes;
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#001f3f',
-    padding: 20,
-  },
-  item: {
-    backgroundColor: '#007AFF',
-    borderRadius: 10,
-    padding: 15,
-    marginBottom: 15,
-  },
-  texto: {
-    color: '#fff',
-    marginBottom: 5,
-  },
-  acoes: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginTop: 10,
-  },
-  botaoEditar: {
-    marginRight: 10,
-    backgroundColor: '#28a745',
-    padding: 8,
-    borderRadius: 5,
-  },
-  botaoExcluir: {
-    backgroundColor: '#dc3545',
-    padding: 8,
-    borderRadius: 5,
-  },
+const criarEstilos = (tema, fonteBase) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: tema.fundo,
+      padding: 20,
+    },
     titulo: {
-      color: '#fff',
-      fontSize: 22,
+      color: tema.texto,
+      fontSize: fonteBase + 4,
       fontWeight: '700',
       marginBottom: 20,
       alignSelf: 'center',
     },
-    vazio: {
-      color: '#ccc',
-      fontSize: 18,
-      alignSelf: 'center',
-      marginTop: 30,
+   item: {
+      backgroundColor: tema.cartao,
+      borderRadius: 10,
+      padding: 15,
+      marginBottom: 15,
+    },
+    texto: {
+      color: tema.texto,
+      fontSize: fonteBase,
+      marginBottom: 5,
+    },
+    acoes: {
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+      marginTop: 10,
+    },
+    botaoEditar: {
+      marginRight: 10,
+      backgroundColor: '#28a745',
+      padding: 8,
+      borderRadius: 5,
+    },
+    botaoExcluir: {
+      backgroundColor: '#dc3545',
+      padding: 8,
+      borderRadius: 5,
     },
     botaoSintoma: {
       backgroundColor: '#00AAFF',
@@ -130,4 +141,10 @@ const styles = StyleSheet.create({
       borderRadius: 5,
       marginLeft: 10,
     },
-});
+    vazio: {
+      color: tema.textoSecundario ?? tema.texto,
+      fontSize: fonteBase + 2,
+      alignSelf: 'center',
+      marginTop: 30,
+    },
+  });
