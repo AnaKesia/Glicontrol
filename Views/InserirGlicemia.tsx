@@ -141,15 +141,15 @@ const criarEstilos = (tema, fonte) => StyleSheet.create({
     justifyContent: 'center',
   },
   title: {
-    fontSize: fonte + 6,  // título maior que a fonte base
+    fontSize: fonte + 6,
     color: tema.texto,
     marginBottom: 20,
     textAlign: 'center',
   },
   input: {
     backgroundColor: tema.inputFundo || '#fff',
-    color: tema.texto,
-    fontSize: fonte,   // tamanho da fonte dinâmico aqui
+    color: '#000000',
+    fontSize: fonte,
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 10,

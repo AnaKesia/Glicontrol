@@ -26,7 +26,6 @@ export const tamanhosFonte = {
   grande: 22,
 };
 
-// Chaves do armazenamento
 const CHAVE_TEMA = '@configuracoes:tema';
 const CHAVE_FONTE = '@configuracoes:fonte';
 
@@ -36,7 +35,6 @@ export const ConfiguracoesProvider = ({ children }) => {
     fonte: 'media',
   });
 
-  // Carregar tema e fonte salvos
   useEffect(() => {
     const carregarConfigSalva = async () => {
       try {
@@ -53,7 +51,6 @@ export const ConfiguracoesProvider = ({ children }) => {
     carregarConfigSalva();
   }, []);
 
-  // Atualizar config e salvar no AsyncStorage
   const atualizarConfig = async (novasConfigs) => {
     try {
       if (novasConfigs.tema) {

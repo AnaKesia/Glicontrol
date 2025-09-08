@@ -20,7 +20,6 @@ const ListaRefeicoes = () => {
     try {
       const lista = await buscarRefeicoesUsuario();
 
-      // Verifica e atualiza análise glicêmica se necessário
       const atualizadas = await Promise.all(
         lista.map(async (item) => {
           if (

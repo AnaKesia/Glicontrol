@@ -34,7 +34,6 @@ async function buscarMedicaoPorId(medicaoId) {
 }
 
 export async function prepararRegistrosParaAnalise(userId, dias = null) {
-  // modo completo apenas, sem opção simples
   const sintomas = await buscarSintomasPorUsuario(userId, dias);
   const registros = await Promise.all(
     sintomas.map(async (s) => {
