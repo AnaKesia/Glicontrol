@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, Button, Alert, StyleSheet,
-  TouchableOpacity, Platform, Switch, ScrollView
+  TouchableOpacity, Switch, ScrollView
 } from 'react-native';
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
 import notifee, { TriggerType, RepeatFrequency, AndroidImportance } from '@notifee/react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import { TimePicker } from '../hooks/TimePicker';
 
 const CadastrarMedicamento = ({ route, navigation }) => {
   const editar = route.params?.editar;
@@ -16,8 +16,7 @@ const CadastrarMedicamento = ({ route, navigation }) => {
   const [dose, setDose] = useState('');
   const [observacoes, setObservacoes] = useState('');
   const [notificar, setNotificar] = useState(false);
-
-  const [modoNotificacao, setModoNotificacao] = useState('horarios'); // 'horarios' ou 'intervalo'
+  const [modoNotificacao, setModoNotificacao] = useState('horarios');
   const [horarios, setHorarios] = useState([new Date()]);
   const [mostrarIndex, setMostrarIndex] = useState(null);
   const [intervaloHoras, setIntervaloHoras] = useState('');
@@ -26,17 +25,14 @@ const CadastrarMedicamento = ({ route, navigation }) => {
     if (editar && dados) {
       setNome(dados.Nome);
       setDose(dados.Dose);
-      setObservacoes(dados.Observações || '');
+      setObservacoes(dados.Observacoes || '');
       setNotificar(dados.Notificar || false);
 
       if (dados.Horarios) {
         const lista = dados.Horarios.map(h => {
           const [hora, minuto] = h.split(':').map(Number);
           const nova = new Date();
-          nova.setHours(hora);
-          nova.setMinutes(minuto);
-          nova.setSeconds(0);
-          nova.setMilliseconds(0);
+          nova.setHours(hora, minuto, 0, 0);
           return nova;
         });
         setHorarios(lista);
@@ -44,32 +40,36 @@ const CadastrarMedicamento = ({ route, navigation }) => {
       } else if (dados.IntervaloHoras) {
         setIntervaloHoras(String(dados.IntervaloHoras));
         setModoNotificacao('intervalo');
-      } else if (dados.Horário) {
-        const [hora, minuto] = dados.Horário.split(':').map(Number);
-        const nova = new Date();
-        nova.setHours(hora);
-        nova.setMinutes(minuto);
-        nova.setSeconds(0);
-        nova.setMilliseconds(0);
-        setHorarios([nova]);
-        setModoNotificacao('horarios');
       }
     }
   }, [editar, dados]);
 
   const formatarHorario = (date) => date.toTimeString().slice(0, 5);
 
-  const prepararDados = (uid) => ({
+  const prepararDados = (uid, notificationIds = []) => ({
     userid: uid,
     Nome: nome.trim(),
     Dose: dose.trim(),
-    Observações: observacoes.trim(),
+    Observacoes: observacoes.trim(),
     Notificar: notificar,
     Horarios: modoNotificacao === 'horarios' ? horarios.map(formatarHorario) : null,
-    IntervaloHoras: modoNotificacao === 'intervalo' ? parseInt(intervaloHoras) : null,
+    IntervaloHoras: modoNotificacao === 'intervalo' ? parseInt(intervaloHoras, 10) : null,
+    notificationIds,
   });
 
+  const cancelarNotificacoesAntigas = async (ids = []) => {
+    try {
+      for (const id of ids) {
+        await notifee.cancelNotification(id);
+      }
+    } catch (err) {
+      console.warn('Erro ao cancelar notificações antigas:', err);
+    }
+  };
+
   const agendarNotificacao = async () => {
+    const novosIds = [];
+
     try {
       await notifee.createChannel({
         id: 'medicamentos',
@@ -84,7 +84,7 @@ const CadastrarMedicamento = ({ route, navigation }) => {
           const data = new Date(h);
           if (data <= agora) data.setDate(data.getDate() + 1);
 
-          await notifee.createTriggerNotification(
+          const id = await notifee.createTriggerNotification(
             {
               title: 'Hora de tomar o medicamento',
               body: `${nome} - ${dose}`,
@@ -96,27 +96,23 @@ const CadastrarMedicamento = ({ route, navigation }) => {
               repeatFrequency: RepeatFrequency.DAILY,
             }
           );
-        }
-      }
 
-      else if (modoNotificacao === 'intervalo') {
+          novosIds.push(id);
+        }
+      } else if (modoNotificacao === 'intervalo') {
         const horas = parseInt(intervaloHoras);
         const base = new Date();
-        base.setHours(0, 0, 0, 0); // meia-noite de hoje
-
+        base.setHours(0, 0, 0, 0);
         const notificacoes = [];
 
         for (let i = 0; i < 24; i += horas) {
           const data = new Date(base);
           data.setHours(i);
-
-          if (data > agora) {
-            notificacoes.push(data);
-          }
+          if (data > agora) notificacoes.push(data);
         }
 
         for (const data of notificacoes) {
-          await notifee.createTriggerNotification(
+          const id = await notifee.createTriggerNotification(
             {
               title: 'Lembrete de medicamento',
               body: `${nome} - repetir a cada ${horas}h`,
@@ -128,11 +124,16 @@ const CadastrarMedicamento = ({ route, navigation }) => {
               repeatFrequency: RepeatFrequency.DAILY,
             }
           );
+
+          novosIds.push(id);
         }
       }
+
+      return novosIds;
     } catch (err) {
       console.error('Erro ao agendar notificação:', err);
       Alert.alert('Erro ao agendar notificação');
+      return [];
     }
   };
 
@@ -143,16 +144,24 @@ const CadastrarMedicamento = ({ route, navigation }) => {
       return;
     }
 
-    const medicamento = prepararDados(usuario.uid);
-
     try {
+      let antigosIds = dados?.notificationIds || [];
+      if (editar && antigosIds.length > 0) {
+        await cancelarNotificacoesAntigas(antigosIds);
+      }
+
+      let novosIds = [];
+      if (notificar) {
+        novosIds = await agendarNotificacao();
+      }
+
+      const medicamento = prepararDados(usuario.uid, novosIds);
+
       if (editar && dados?.id) {
         await firestore().collection('medicamentos').doc(dados.id).update(medicamento);
       } else {
         await firestore().collection('medicamentos').add(medicamento);
       }
-
-      if (notificar) await agendarNotificacao();
 
       Alert.alert('Sucesso', editar ? 'Medicamento atualizado!' : 'Medicamento cadastrado!');
       navigation.goBack();
@@ -162,12 +171,12 @@ const CadastrarMedicamento = ({ route, navigation }) => {
     }
   };
 
-  const atualizarHorario = (index, selectedTime) => {
-    if (selectedTime) {
+  const atualizarHorario = (index, date) => {
+    if (date) {
       const novos = [...horarios];
-      selectedTime.setSeconds(0);
-      selectedTime.setMilliseconds(0);
-      novos[index] = selectedTime;
+      date.setSeconds(0);
+      date.setMilliseconds(0);
+      novos[index] = date;
       setHorarios(novos);
     }
     setMostrarIndex(null);
@@ -227,21 +236,20 @@ const CadastrarMedicamento = ({ route, navigation }) => {
                   />
                 )}
               </View>
-              {mostrarIndex !== null && (
-                <DateTimePicker
-                  value={horarios[mostrarIndex]}
-                  mode="time"
-                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                  onChange={(_, date) => atualizarHorario(mostrarIndex, date)}
-                />
-              )}
+
+              <TimePicker
+                dataHora={horarios[mostrarIndex]}
+                setDataHora={(date) => atualizarHorario(mostrarIndex, date)}
+                mostrar={mostrarIndex !== null}
+                setMostrar={() => setMostrarIndex(null)}
+              />
             </>
           ) : (
             <TextInput
               style={styles.input}
               placeholder="A cada quantas horas?"
               value={intervaloHoras}
-              onChangeText={setIntervaloHoras}
+              onChangeText={text => setIntervaloHoras(text.replace(/[^0-9]/g, ''))}
               keyboardType="numeric"
             />
           )}

@@ -6,20 +6,24 @@ export class GlicemiaService {
     const usuario = auth().currentUser;
     if (!usuario) throw new Error('Usuário não autenticado');
 
+    const medicoesRef = firestore().collection('medicoes');
+
     const dadosComUsuario = {
       ...dados,
       usuarioId: usuario.uid,
     };
 
-    if (medicaoId) {
-      await firestore()
-        .collection('medicoes')
-        .doc(medicaoId)
-        .set(dadosComUsuario, { merge: true });
-      return 'Medição atualizada!';
-    } else {
-      await firestore().collection('medicoes').add(dadosComUsuario);
-      return 'Medição registrada!';
+    try {
+      if (medicaoId) {
+        await medicoesRef.doc(medicaoId).set(dadosComUsuario, { merge: true });
+        return 'Medição atualizada!';
+      } else {
+        await medicoesRef.add(dadosComUsuario);
+        return 'Medição registrada!';
+      }
+    } catch (error) {
+      console.error('Erro ao salvar medição:', error);
+      throw new Error('Falha ao salvar medição.');
     }
   }
 }

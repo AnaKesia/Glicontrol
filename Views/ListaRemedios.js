@@ -51,14 +51,43 @@ const ListaRemedios = ({ navigation }) => {
     });
   }, [navigation]);
 
+  // 🧹 Função para cancelar todas as notificações associadas a um medicamento
+  const cancelarNotificacoesDoMedicamento = async (id) => {
+    try {
+      const doc = await firestore().collection('medicamentos').doc(id).get();
+      if (doc.exists) {
+        const dados = doc.data();
+        const notificationIds = dados.notificationIds || [];
+        if (notificationIds.length > 0) {
+          for (const nId of notificationIds) {
+            try {
+              await notifee.cancelNotification(nId);
+            } catch (erro) {
+              console.warn('Erro ao cancelar notificação:', erro);
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao cancelar notificações:', error);
+    }
+  };
+
+  // 🗑️ Função de exclusão com cancelamento de notificações
   const confirmarExclusao = (id) => {
     Alert.alert('Excluir', 'Deseja excluir este medicamento?', [
       { text: 'Cancelar', style: 'cancel' },
       {
         text: 'Sim',
         onPress: async () => {
-          await firestore().collection('medicamentos').doc(id).delete();
-          setMedicamentos(prev => prev.filter(item => item.id !== id));
+          try {
+            await cancelarNotificacoesDoMedicamento(id);
+            await firestore().collection('medicamentos').doc(id).delete();
+            setMedicamentos(prev => prev.filter(item => item.id !== id));
+          } catch (error) {
+            console.error('Erro ao excluir medicamento:', error);
+            Alert.alert('Erro ao excluir o medicamento');
+          }
         },
       },
     ]);

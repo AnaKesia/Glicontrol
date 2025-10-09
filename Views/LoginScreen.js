@@ -1,38 +1,36 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, Button, StyleSheet, TouchableOpacity, Alert } from 'react-native';
-import auth from '@react-native-firebase/auth';
 import { useNavigation } from '@react-navigation/native';
+import { useAuth } from '../hooks/useAuth';
 
-const LoginScreen: React.FC = () => {
+const LoginScreen = () => {
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
-  const [mostrarErro, setMostrarErro] = useState(false);
+  const [erros, setErros] = useState({});
   const navigation = useNavigation();
+  const { login } = useAuth();
 
-  const handleRegistro = () => {
-    navigation.navigate('Registro');
+  const validarCampos = () => {
+    const novosErros = {};
+    if (!email) novosErros.email = 'Informe seu e-mail.';
+    else if (!/\S+@\S+\.\S+/.test(email)) novosErros.email = 'Formato de e-mail inválido.';
+
+    if (!senha) novosErros.senha = 'Informe sua senha.';
+    setErros(novosErros);
+    return Object.keys(novosErros).length === 0;
   };
 
-  const handleLogin = () => {
-    if (!email || !senha) {
-      setMostrarErro(true);
-      return;
+  const handleLogin = async () => {
+    if (!validarCampos()) return;
+
+    try {
+      const { user } = await login(email, senha);
+      Alert.alert('Sucesso', 'Login realizado com sucesso!');
+      console.log('Usuário logado:', user.email);
+      navigation.navigate('PaginaInicial');
+    } catch (error) {
+      Alert.alert('Erro de login', error.message);
     }
-
-    setMostrarErro(false);
-
-    auth()
-      .signInWithEmailAndPassword(email, senha)
-      .then(userCredential => {
-        console.log('Login bem-sucedido:', userCredential.user);
-        Alert.alert('Sucesso', 'Login realizado com sucesso!');
-        navigation.navigate('PaginaInicial');
-      })
-      .catch(error => {
-        console.error('Erro ao fazer login:', error);
-        Alert.alert('Erro', error.message);
-        setMostrarErro(true);
-      });
   };
 
   return (
@@ -40,9 +38,9 @@ const LoginScreen: React.FC = () => {
       <Text style={styles.title}>Login</Text>
 
       <View style={styles.inputContainer}>
-        {mostrarErro && !email && (
+        {erros.email && (
           <View style={styles.tooltip}>
-            <Text style={styles.tooltipText}>Preencha esse campo.</Text>
+            <Text style={styles.tooltipText}>{erros.email}</Text>
             <View style={styles.tooltipArrow} />
           </View>
         )}
@@ -58,9 +56,9 @@ const LoginScreen: React.FC = () => {
       </View>
 
       <View style={styles.inputContainer}>
-        {mostrarErro && !senha && (
+        {erros.senha && (
           <View style={styles.tooltip}>
-            <Text style={styles.tooltipText}>Preencha esse campo</Text>
+            <Text style={styles.tooltipText}>{erros.senha}</Text>
             <View style={styles.tooltipArrow} />
           </View>
         )}
@@ -78,7 +76,7 @@ const LoginScreen: React.FC = () => {
 
       <View style={styles.registroContainer}>
         <Text style={styles.registro}>Não tem uma conta? </Text>
-        <TouchableOpacity onPress={handleRegistro}>
+        <TouchableOpacity onPress={() => navigation.navigate('Registro')}>
           <Text style={styles.registrarLink}>Registrar-se</Text>
         </TouchableOpacity>
       </View>

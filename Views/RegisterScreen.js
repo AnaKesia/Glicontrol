@@ -1,33 +1,31 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, Button, StyleSheet, Alert } from 'react-native';
-import { auth } from '../firebaseConfig';
+import { useNavigation } from '@react-navigation/native';
+import { useRegister } from '../hooks/useRegister';
 
-const RegisterScreen = ({ navigation }) => {
+const RegisterScreen = () => {
+  const navigation = useNavigation();
+  const { registrar, erros } = useRegister();
+
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
 
-  const handleRegister = () => {
-    if (!email || !senha || !nome) {
-      Alert.alert('Erro', 'Preencha todos os campos');
-      return;
+  const handleRegister = async () => {
+    try {
+      const { user } = await registrar(nome, email, senha);
+      Alert.alert('Sucesso', 'Usuário registrado com sucesso!');
+      console.log('Usuário registrado:', user.email);
+      navigation.goBack();
+    } catch (error) {
+      Alert.alert('Erro de registro', error.message);
     }
-
-    auth().createUserWithEmailAndPassword(email, senha)
-      .then(userCredential => {
-        console.log('Usuário registrado:', userCredential.user);
-        Alert.alert('Sucesso', 'Usuário registrado com sucesso!');
-        navigation.goBack();
-      })
-      .catch(error => {
-        console.error('Erro ao registrar:', error);
-        Alert.alert('Erro', error.message);
-      });
   };
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Registrar</Text>
+
       <TextInput
         style={styles.input}
         placeholder="Nome de usuário"
@@ -35,6 +33,8 @@ const RegisterScreen = ({ navigation }) => {
         value={nome}
         onChangeText={setNome}
       />
+      {erros.nome && <Text style={styles.erro}>{erros.nome}</Text>}
+
       <TextInput
         style={styles.input}
         placeholder="E-mail"
@@ -44,6 +44,8 @@ const RegisterScreen = ({ navigation }) => {
         keyboardType="email-address"
         autoCapitalize="none"
       />
+      {erros.email && <Text style={styles.erro}>{erros.email}</Text>}
+
       <TextInput
         style={styles.input}
         placeholder="Senha"
@@ -52,6 +54,8 @@ const RegisterScreen = ({ navigation }) => {
         onChangeText={setSenha}
         secureTextEntry
       />
+      {erros.senha && <Text style={styles.erro}>{erros.senha}</Text>}
+
       <Button title="Registrar" onPress={handleRegister} />
     </View>
   );
@@ -78,6 +82,11 @@ const styles = StyleSheet.create({
     height: 45,
     borderRadius: 8,
     paddingHorizontal: 10,
-    marginBottom: 15,
+    marginBottom: 5,
+  },
+  erro: {
+    color: '#ff4d4f',
+    marginBottom: 10,
+    fontSize: 12,
   },
 });

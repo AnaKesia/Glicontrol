@@ -10,7 +10,7 @@ import notifee, { TriggerType, RepeatFrequency } from '@notifee/react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { buscarMedicoesUsuario } from '../firebaseService';
 import { analisarGlicemia } from '../services/analiseGlicemia';
-import { useConfiguracoes, temas, tamanhosFonte } from './Configuracoes'; // Importar contexto
+import { useConfiguracoes, temas, tamanhosFonte } from './Configuracoes';
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -49,7 +49,6 @@ const HomeScreen = () => {
         setLabels(labelsAux);
         setGlicemias(valores);
 
-        // Buscar alerta recente
         const alertas = analisarGlicemia(dados);
         if (Array.isArray(alertas) && alertas.length > 0) {
           setAlertaRecente(alertas[0]);
@@ -81,31 +80,80 @@ const HomeScreen = () => {
 
       for (const doc of querySnapshot.docs) {
         const medicamento = doc.data();
-        const [hora, minuto] = medicamento.Horário.split(':').map(Number);
-
         const agora = new Date();
-        let horarioNotificacao = new Date();
-        horarioNotificacao.setHours(hora);
-        horarioNotificacao.setMinutes(minuto);
-        horarioNotificacao.setSeconds(0);
-        horarioNotificacao.setMilliseconds(0);
 
-        if (horarioNotificacao <= agora) {
-          horarioNotificacao.setDate(horarioNotificacao.getDate() + 1);
-        }
+        if (medicamento.Horário) {
+          const [hora, minuto] = medicamento.Horário.split(':').map(Number);
+          let horarioNotificacao = new Date();
+          horarioNotificacao.setHours(hora, minuto, 0, 0);
 
-        await notifee.createTriggerNotification(
-          {
-            title: 'Hora de tomar o medicamento',
-            body: `${medicamento.Nome} - ${medicamento.Dose}`,
-            android: { channelId: 'medicamentos' },
-          },
-          {
-            type: TriggerType.TIMESTAMP,
-            timestamp: horarioNotificacao.getTime(),
-            repeatFrequency: RepeatFrequency.DAILY,
+          if (horarioNotificacao <= agora) {
+            horarioNotificacao.setDate(horarioNotificacao.getDate() + 1);
           }
-        );
+
+          await notifee.createTriggerNotification(
+            {
+              title: 'Hora de tomar o medicamento',
+              body: `${medicamento.Nome} - ${medicamento.Dose}`,
+              android: { channelId: 'medicamentos' },
+            },
+            {
+              type: TriggerType.TIMESTAMP,
+              timestamp: horarioNotificacao.getTime(),
+              repeatFrequency: RepeatFrequency.DAILY,
+            }
+          );
+
+        } else if (Array.isArray(medicamento.Horarios)) {
+          for (const h of medicamento.Horarios) {
+            const [hora, minuto] = h.split(':').map(Number);
+            let horarioNotificacao = new Date();
+            horarioNotificacao.setHours(hora, minuto, 0, 0);
+
+            if (horarioNotificacao <= agora) {
+              horarioNotificacao.setDate(horarioNotificacao.getDate() + 1);
+            }
+
+            await notifee.createTriggerNotification(
+              {
+                title: 'Hora de tomar o medicamento',
+                body: `${medicamento.Nome} - ${medicamento.Dose}`,
+                android: { channelId: 'medicamentos' },
+              },
+              {
+                type: TriggerType.TIMESTAMP,
+                timestamp: horarioNotificacao.getTime(),
+                repeatFrequency: RepeatFrequency.DAILY,
+              }
+            );
+          }
+        } else if (medicamento.IntervaloHoras) {
+          const horas = medicamento.IntervaloHoras;
+          const base = new Date();
+          base.setHours(0, 0, 0, 0);
+
+          for (let i = 0; i < 24; i += horas) {
+            let horarioNotificacao = new Date(base);
+            horarioNotificacao.setHours(i, 0, 0, 0);
+
+            if (horarioNotificacao <= agora) {
+              horarioNotificacao.setDate(horarioNotificacao.getDate() + 1);
+            }
+
+            await notifee.createTriggerNotification(
+              {
+                title: 'Lembrete de medicamento',
+                body: `${medicamento.Nome} - repetir a cada ${horas}h`,
+                android: { channelId: 'medicamentos' },
+              },
+              {
+                type: TriggerType.TIMESTAMP,
+                timestamp: horarioNotificacao.getTime(),
+                repeatFrequency: RepeatFrequency.DAILY,
+              }
+            );
+          }
+        }
       }
     } catch (error) {
       console.error('Erro ao agendar notificações:', error);
