@@ -1,7 +1,9 @@
 
-const GEMINI_API_KEY = 'AIzaSyDqH5QxZxhb8SpQ-_LEmhTteXmzYmpSHgE';
+const GEMINI_API_KEY = 'AIzaSyDuWZbdbK6JWq-vyVheQjK4H2TZXrteT6U';
+//AIzaSyDqH5QxZxhb8SpQ-_LEmhTteXmzYmpSHgE
+//AIzaSyA1sxQnGDtnFSASlZynLTQ870206eeNAuo
 
-const MODEL_NAME = 'gemini-1.5-flash-latest';
+const MODEL_NAME = 'gemini-2.5-flash';
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${GEMINI_API_KEY}`;
 
 export const analisarImpactoGlicemicoGemini = async (refeicaoTexto) => {
@@ -40,9 +42,18 @@ export const analisarImpactoGlicemicoGemini = async (refeicaoTexto) => {
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      console.error('Erro da API Google:', errorData);
-      throw new Error(`Erro na API: ${response.statusText}`);
+        let errorDetails = `Erro na API: ${response.statusText || response.status}`;
+        try {
+            const errorData = await response.json();
+            console.error('Erro detalhado da API Google (JSON):', errorData);
+            errorDetails = errorData.error ? errorData.error.message : errorDetails;
+        } catch (e) {
+            const textError = await response.text();
+            console.error('Erro detalhado da API Google (TEXTO):', textError);
+            errorDetails = textError || errorDetails;
+        }
+
+        throw new Error(`Erro na API: ${errorDetails}`);
     }
 
     const data = await response.json();

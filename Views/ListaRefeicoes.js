@@ -22,8 +22,9 @@ const ListaRefeicoes = () => {
 
       const atualizadas = await Promise.all(
         lista.map(async (item) => {
+          // Só analisa se NÃO tiver análise e houver observações
           if (
-            (!item.analiseGlicemica || item.analiseGlicemica === 'Nenhuma análise') &&
+            (!item.analiseGlicemica || item.analiseGlicemica === 'Nenhuma análise' || item.analiseGlicemica === '') &&
             item.observacoes?.trim()
           ) {
             try {
@@ -37,6 +38,7 @@ const ListaRefeicoes = () => {
               return { ...item, analiseGlicemica: 'Análise falhou' };
             }
           }
+
           return item;
         })
       );

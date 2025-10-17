@@ -74,7 +74,6 @@ const InserirGlicemia = () => {
 
 export default InserirGlicemia;
 
-// estilo continua igual
 const criarEstilos = (tema, fonte) =>
   StyleSheet.create({
     container: {

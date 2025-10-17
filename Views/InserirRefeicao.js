@@ -4,10 +4,10 @@ import {
 } from 'react-native';
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { Picker } from '@react-native-picker/picker';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useConfiguracoes, tamanhosFonte } from './Configuracoes';
+import { TimePicker } from '../hooks/TimePicker';
 import { analisarImpactoGlicemicoGemini } from '../services/AnaliseGlicemicaIA';
 
 const tiposRefeicao = ['Café da Manhã', 'Almoço', 'Lanche', 'Jantar', 'Outro'];
@@ -22,7 +22,9 @@ const InserirRefeicao = () => {
   const tamanhoFonte = tamanhosFonte[config.fonte];
   const styles = criarEstilos(tema, tamanhoFonte);
 
-  const [tipo, setTipo] = useState(refeicao?.tipo || '');
+  const [tipo, setTipo] = useState(
+    refeicao && tiposRefeicao.includes(refeicao.tipo) ? refeicao.tipo : ''
+  );
   const [calorias, setCalorias] = useState(refeicao?.calorias?.toString() || '');
   const [observacoes, setObservacoes] = useState(refeicao?.observacoes || '');
   const [data, setData] = useState(refeicao?.timestamp?.toDate() || new Date());
@@ -34,9 +36,24 @@ const InserirRefeicao = () => {
       return;
     }
 
-    const userId = auth().currentUser.uid;
+    // ✅ Verifica se o usuário está autenticado
+    const currentUser = auth().currentUser;
+    if (!currentUser) {
+      Alert.alert('Erro', 'Usuário não autenticado. Faça login novamente.');
+      return;
+    }
+    const userId = currentUser.uid;
 
-    // Só adiciona calorias se for um número válido
+    let valorCalorias = null;
+    if (calorias.trim() !== '') {
+      const valor = parseInt(calorias);
+      if (isNaN(valor) || valor < 0) {
+        Alert.alert('Erro', 'Informe um valor de calorias válido (não negativo).');
+        return;
+      }
+      valorCalorias = valor;
+    }
+
     const dados = {
       tipo,
       observacoes: observacoes.trim(),
@@ -44,28 +61,35 @@ const InserirRefeicao = () => {
       timestamp: firestore.Timestamp.fromDate(data),
     };
 
-    if (calorias.trim() !== '' && !isNaN(parseInt(calorias))) {
-      dados.calorias = parseInt(calorias);
+    if (valorCalorias !== null) {
+      dados.calorias = valorCalorias;
     }
 
     try {
       let docRef;
+      let precisaReanalisar = false;
 
       if (refeicao) {
+        if (refeicao.observacoes !== observacoes.trim()) {
+          precisaReanalisar = true;
+          dados.analiseGlicemica = 'Análise em andamento...';
+        } else if (refeicao.analiseGlicemica) {
+          dados.analiseGlicemica = refeicao.analiseGlicemica;
+        }
+
         docRef = firestore().collection('refeicoes').doc(refeicao.id);
         await docRef.set(dados, { merge: true });
       } else {
-        docRef = await firestore().collection('refeicoes').add(dados);
+        docRef = await firestore().collection('refeicoes').add({
+          ...dados,
+          analiseGlicemica: 'Análise em andamento...',
+        });
+        precisaReanalisar = true;
       }
 
-      // Se for novo e houver observações, tenta análise
-      if (!refeicao && observacoes.trim() !== '') {
-        console.log('Chamando a IA com:', observacoes);
-        await docRef.update({ analiseGlicemica: 'Análise em andamento...' });
-
+      if (precisaReanalisar && observacoes.trim() !== '') {
         try {
           const explicacao = await analisarImpactoGlicemicoGemini(observacoes);
-          console.log('Resposta da IA:', explicacao);
           await docRef.update({ analiseGlicemica: explicacao });
         } catch (err) {
           console.error('Erro na IA:', err);
@@ -81,27 +105,22 @@ const InserirRefeicao = () => {
     }
   };
 
-  const onChangeData = (event, selectedDate) => {
-    if (Platform.OS !== 'ios') setMostrarData(false);
-    if (selectedDate) setData(selectedDate);
-  };
-
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>Tipo de Refeição:</Text>
-      <View style={styles.input}>
-        <Picker
-          selectedValue={tipo}
-          onValueChange={setTipo}
-          style={{ fontSize: tamanhoFonte }}
-          dropdownIconColor={tema.texto}
-        >
-          <Picker.Item label="Selecione..." value="" />
-          {tiposRefeicao.map(item => (
-            <Picker.Item key={item} label={item} value={item} />
-          ))}
-        </Picker>
-      </View>
+          <Text style={styles.label}>Tipo de Refeição:</Text>
+          <View style={[styles.pickerContainer, { borderColor: tema.texto }]}>
+            <Picker
+              selectedValue={tipo}
+              onValueChange={setTipo}
+              style={[styles.picker, { color: tema.texto, fontSize: tamanhoFonte }]}
+              dropdownIconColor={tema.texto}
+            >
+              <Picker.Item label="Selecione..." value="" />
+              {tiposRefeicao.map(item => (
+                <Picker.Item key={item} label={item} value={item} />
+              ))}
+            </Picker>
+          </View>
 
       <Text style={styles.label}>Calorias:</Text>
       <TextInput
@@ -124,19 +143,16 @@ const InserirRefeicao = () => {
       />
 
       <TouchableOpacity onPress={() => setMostrarData(true)} style={styles.dateButton}>
-        <Text style={styles.dateButtonText}>Selecionar Data e Hora</Text>
+        <Text style={styles.dateButtonText}>Selecionar Hora</Text>
       </TouchableOpacity>
-
       <Text style={styles.selectedDate}>{data.toLocaleString()}</Text>
 
-      {mostrarData && (
-        <DateTimePicker
-          value={data}
-          mode="datetime"
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-          onChange={onChangeData}
-        />
-      )}
+      <TimePicker
+        dataHora={data}
+        setDataHora={setData}
+        mostrar={mostrarData}
+        setMostrar={setMostrarData}
+      />
 
       <TouchableOpacity style={styles.saveButton} onPress={salvar}>
         <Text style={styles.saveButtonText}>Salvar</Text>
@@ -166,6 +182,11 @@ const criarEstilos = (tema, fontSize) =>
       borderRadius: 5,
       fontSize,
     },
+    pickerContainer: {
+       borderWidth: 1,
+       borderRadius: 5,
+       marginBottom: 10,
+     },
     dateButton: {
       backgroundColor: '#007AFF',
       padding: 10,

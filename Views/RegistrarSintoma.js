@@ -45,14 +45,19 @@ const RegistrarSintoma = ({ route, navigation }) => {
       return;
     }
 
-    const userId = auth().currentUser.uid;
+    const user = auth().currentUser;
+    if (!user) {
+      Alert.alert('Erro', 'Usuário não autenticado');
+      return;
+    }
+    const userId = user.uid;
 
     const registro = {
       glicemiaId: sintomaEdicao?.glicemiaId || glicemiaId,
       sintoma: sintomasSelecionados,
       intensidade,
       anotacao: anotacao.trim(),
-      timestamp: sintomaEdicao?.timestamp || new Date(),
+      timestamp: sintomaEdicao?.timestamp || firestore.FieldValue.serverTimestamp(),
       usuarioId: userId,
     };
 
@@ -109,7 +114,7 @@ const RegistrarSintoma = ({ route, navigation }) => {
             ]}
             onPress={() => setIntensidade(nivel)}
           >
-            <Text style={styles.buttonText}>{nivel}</Text>
+            <Text style={[styles.buttonText, { color: intensidade === nivel ? '#fff' : '#000' }]}>{nivel}</Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -119,7 +124,7 @@ const RegistrarSintoma = ({ route, navigation }) => {
         style={[styles.input, { height: 80 }]}
         placeholder="Digite uma observação"
         value={anotacao}
-        onChangeText={setAnotacao}
+        onChangeText={(text) => setAnotacao(text.trimStart())}
         multiline
         placeholderTextColor={tema.texto + '99'}
       />
@@ -167,7 +172,7 @@ const criarEstilos = (tema, fonte) => StyleSheet.create({
     marginBottom: 15,
   },
   sintomaButton: {
-    backgroundColor: '#fff',
+    backgroundColor: '#007AFF33',
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 20,
@@ -197,7 +202,6 @@ const criarEstilos = (tema, fonte) => StyleSheet.create({
     backgroundColor: '#007AFF',
   },
   buttonText: {
-    color: '#fff',
     fontWeight: 'bold',
     fontSize: fonte,
   },

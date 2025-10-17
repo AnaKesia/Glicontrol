@@ -5,8 +5,9 @@ import {
 } from 'react-native';
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
-import notifee, { TriggerType, RepeatFrequency, AndroidImportance } from '@notifee/react-native';
 import { TimePicker } from '../hooks/TimePicker';
+import { agendarNotificacao, cancelarNotificacoesAntigas } from '../utils/notificacoes';
+import { prepararDados } from '../utils/medicamentoUtils';
 
 const CadastrarMedicamento = ({ route, navigation }) => {
   const editar = route.params?.editar;
@@ -44,99 +45,6 @@ const CadastrarMedicamento = ({ route, navigation }) => {
     }
   }, [editar, dados]);
 
-  const formatarHorario = (date) => date.toTimeString().slice(0, 5);
-
-  const prepararDados = (uid, notificationIds = []) => ({
-    userid: uid,
-    Nome: nome.trim(),
-    Dose: dose.trim(),
-    Observacoes: observacoes.trim(),
-    Notificar: notificar,
-    Horarios: modoNotificacao === 'horarios' ? horarios.map(formatarHorario) : null,
-    IntervaloHoras: modoNotificacao === 'intervalo' ? parseInt(intervaloHoras, 10) : null,
-    notificationIds,
-  });
-
-  const cancelarNotificacoesAntigas = async (ids = []) => {
-    try {
-      for (const id of ids) {
-        await notifee.cancelNotification(id);
-      }
-    } catch (err) {
-      console.warn('Erro ao cancelar notificações antigas:', err);
-    }
-  };
-
-  const agendarNotificacao = async () => {
-    const novosIds = [];
-
-    try {
-      await notifee.createChannel({
-        id: 'medicamentos',
-        name: 'Lembretes de Medicamentos',
-        importance: AndroidImportance.HIGH,
-      });
-
-      const agora = new Date();
-
-      if (modoNotificacao === 'horarios') {
-        for (const h of horarios) {
-          const data = new Date(h);
-          if (data <= agora) data.setDate(data.getDate() + 1);
-
-          const id = await notifee.createTriggerNotification(
-            {
-              title: 'Hora de tomar o medicamento',
-              body: `${nome} - ${dose}`,
-              android: { channelId: 'medicamentos', smallIcon: 'ic_launcher' },
-            },
-            {
-              type: TriggerType.TIMESTAMP,
-              timestamp: data.getTime(),
-              repeatFrequency: RepeatFrequency.DAILY,
-            }
-          );
-
-          novosIds.push(id);
-        }
-      } else if (modoNotificacao === 'intervalo') {
-        const horas = parseInt(intervaloHoras);
-        const base = new Date();
-        base.setHours(0, 0, 0, 0);
-        const notificacoes = [];
-
-        for (let i = 0; i < 24; i += horas) {
-          const data = new Date(base);
-          data.setHours(i);
-          if (data > agora) notificacoes.push(data);
-        }
-
-        for (const data of notificacoes) {
-          const id = await notifee.createTriggerNotification(
-            {
-              title: 'Lembrete de medicamento',
-              body: `${nome} - repetir a cada ${horas}h`,
-              android: { channelId: 'medicamentos', smallIcon: 'ic_launcher' },
-            },
-            {
-              type: TriggerType.TIMESTAMP,
-              timestamp: data.getTime(),
-              repeatFrequency: RepeatFrequency.DAILY,
-            }
-          );
-
-          novosIds.push(id);
-        }
-      }
-
-      return novosIds;
-    } catch (err) {
-      console.error('Erro ao agendar notificação:', err);
-      Alert.alert('Erro ao agendar notificação');
-      return [];
-    }
-  };
-
   const handleSalvar = async () => {
     const usuario = auth().currentUser;
     if (!usuario || !nome.trim() || !dose.trim()) {
@@ -145,17 +53,16 @@ const CadastrarMedicamento = ({ route, navigation }) => {
     }
 
     try {
-      let antigosIds = dados?.notificationIds || [];
-      if (editar && antigosIds.length > 0) {
-        await cancelarNotificacoesAntigas(antigosIds);
+      if (editar && dados?.notificationIds?.length) {
+        await cancelarNotificacoesAntigas(dados.notificationIds);
       }
 
       let novosIds = [];
       if (notificar) {
-        novosIds = await agendarNotificacao();
+        novosIds = await agendarNotificacao({ nome, dose, modoNotificacao, horarios, intervaloHoras });
       }
 
-      const medicamento = prepararDados(usuario.uid, novosIds);
+      const medicamento = prepararDados(usuario.uid, { nome, dose, observacoes, notificar, horarios, intervaloHoras }, novosIds);
 
       if (editar && dados?.id) {
         await firestore().collection('medicamentos').doc(dados.id).update(medicamento);
@@ -165,8 +72,8 @@ const CadastrarMedicamento = ({ route, navigation }) => {
 
       Alert.alert('Sucesso', editar ? 'Medicamento atualizado!' : 'Medicamento cadastrado!');
       navigation.goBack();
-    } catch (error) {
-      console.error('Erro ao salvar medicamento:', error);
+    } catch (err) {
+      console.error('Erro ao salvar medicamento:', err);
       Alert.alert('Erro ao salvar os dados');
     }
   };
@@ -181,6 +88,8 @@ const CadastrarMedicamento = ({ route, navigation }) => {
     }
     setMostrarIndex(null);
   };
+
+  const formatarHorario = (date) => date.toTimeString().slice(0, 5);
 
   return (
     <ScrollView contentContainerStyle={styles.container}>

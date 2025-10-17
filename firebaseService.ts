@@ -1,14 +1,14 @@
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
 
-export const criarMedicao = async (valor, data, categoria, observacoes) => {
+export const criarMedicao = async (valor, data, categoria, observacao) => {
   const userId = auth().currentUser.uid;
 
   return await firestore().collection('medicoes').add({
     valor,
     data,
     categoria,
-    observacoes,
+    observacao,
     usuarioId: userId,
     timestamp: firestore.Timestamp.fromDate(new Date(data)),
   });
@@ -30,7 +30,7 @@ export const buscarMedicoesUsuario = async () => {
         valor: data.valor,
         categoria: data.categoria,
         timestamp: data.timestamp,
-        observacoes: data.observacoes || '',
+        observacao: data.observacao || '',
       };
     })
     .filter(m => m.timestamp)
@@ -49,13 +49,13 @@ export const deletarMedicao = async (id) => {
 };
 
 
-export const criarRefeicao = async (tipo, calorias, observacoes, data) => {
+export const criarRefeicao = async (tipo, calorias, observacao, data) => {
   const userId = auth().currentUser.uid;
 
   return await firestore().collection('refeicoes').add({
     tipo,
     calorias,
-    observacoes,
+    observacao,
     usuarioId: userId,
     timestamp: firestore.Timestamp.fromDate(new Date(data)),
   });
@@ -77,6 +77,7 @@ export const buscarRefeicoesUsuario = async () => {
         tipo: data.tipo,
         calorias: data.calorias,
         observacoes: data.observacoes || '',
+        analiseGlicemica: data.analiseGlicemica || '',
         timestamp: data.timestamp,
         usuarioId: userId,
       };

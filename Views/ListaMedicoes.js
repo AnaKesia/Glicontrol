@@ -74,9 +74,15 @@ const ItemMedicao = ({ item, onEditar, onExcluir, tema, fonteBase }) => {
   return (
     <View style={styles.item}>
       <Text style={styles.texto}>Valor: {item.valor} mg/dL</Text>
-      <Text style={styles.texto}>Categoria: {item.categoria.charAt(0).toUpperCase() + item.categoria.slice(1).toLowerCase()}</Text>
+      <Text style={styles.texto}>
+        Categoria: {item.categoria.charAt(0).toUpperCase() + item.categoria.slice(1).toLowerCase()}
+      </Text>
       <Text style={styles.texto}>Data: {formatarData(item.timestamp)}</Text>
-      {item.observacoes?.trim() && <Text style={styles.texto}>Observações: {item.observacoes}</Text>}
+
+      {item.observacao != null && item.observacao.toString().trim() !== '' && (
+        <Text style={styles.texto}>Observações: {item.observacao}</Text>
+      )}
+
       <View style={styles.acoes}>
         <TouchableOpacity onPress={onEditar} style={styles.botaoEditar}>
           <Icon name="edit" size={18} color="#fff" />

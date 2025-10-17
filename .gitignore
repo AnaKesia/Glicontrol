@@ -77,3 +77,5 @@ yarn-error.log
 firebaseConfig.js
 android/app/google-services.json
 android/services/AnaliseGlicemicaIA.js
+android/app/build.gradle
+my-release-key.jks
