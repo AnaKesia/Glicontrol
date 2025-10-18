@@ -5,6 +5,7 @@ import auth from '@react-native-firebase/auth';
 import { useNavigation } from '@react-navigation/native';
 import { analisarGlicemia, associarSintomas, prepararRegistrosParaAnalise } from '../services/analiseGlicemia';
 import { useConfiguracoes, tamanhosFonte } from './Configuracoes';
+import { criarEstilos } from '../estilos/relatorios';
 
 const Relatorio = () => {
   const [alertas, setAlertas] = useState([]);
@@ -98,34 +99,3 @@ const Relatorio = () => {
 };
 
 export default Relatorio;
-
-const criarEstilos = (tema, fonte) => StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: tema.fundo,
-    padding: 20,
-  },
-  titulo: {
-    color: tema.texto,
-    fontSize: fonte + 4,
-    fontWeight: 'bold',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  texto: {
-    color: tema.texto,
-    fontSize: fonte,
-  },
-  botao: {
-    marginTop: 30,
-    backgroundColor: tema.botaoFundo,
-    padding: 12,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  textoBotao: {
-    color: tema.botaoTexto,
-    fontSize: fonte,
-    fontWeight: 'bold',
-  },
-});

@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, TextInput, Button, Alert, StyleSheet,
-  TouchableOpacity, Switch, ScrollView
+  View, Text, TextInput, Button, Alert,
+  TouchableOpacity, Switch, ScrollView,
+  KeyboardAvoidingView, Platform, Keyboard, TouchableWithoutFeedback
 } from 'react-native';
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
 import { TimePicker } from '../hooks/TimePicker';
 import { agendarNotificacao, cancelarNotificacoesAntigas } from '../utils/notificacoes';
 import { prepararDados } from '../utils/medicamentoUtils';
+import { useConfiguracoes } from './Configuracoes';
+import { styles } from '../estilos/cadastrarMedicamento';
 
 const CadastrarMedicamento = ({ route, navigation }) => {
   const editar = route.params?.editar;
@@ -21,6 +24,9 @@ const CadastrarMedicamento = ({ route, navigation }) => {
   const [horarios, setHorarios] = useState([new Date()]);
   const [mostrarIndex, setMostrarIndex] = useState(null);
   const [intervaloHoras, setIntervaloHoras] = useState('');
+
+  const { config, temas } = useConfiguracoes();
+  const temaAtual = temas[config.tema];
 
   useEffect(() => {
     if (editar && dados) {
@@ -62,7 +68,11 @@ const CadastrarMedicamento = ({ route, navigation }) => {
         novosIds = await agendarNotificacao({ nome, dose, modoNotificacao, horarios, intervaloHoras });
       }
 
-      const medicamento = prepararDados(usuario.uid, { nome, dose, observacoes, notificar, horarios, intervaloHoras }, novosIds);
+      const medicamento = prepararDados(
+        usuario.uid,
+        { nome, dose, observacoes, notificar, horarios, intervaloHoras },
+        novosIds
+      );
 
       if (editar && dados?.id) {
         await firestore().collection('medicamentos').doc(dados.id).update(medicamento);
@@ -92,112 +102,197 @@ const CadastrarMedicamento = ({ route, navigation }) => {
   const formatarHorario = (date) => date.toTimeString().slice(0, 5);
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>{editar ? 'Editar Medicamento' : 'Cadastrar Medicamento'}</Text>
+    <KeyboardAvoidingView
+      style={{ flex: 1, backgroundColor: temaAtual.fundo }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
+    >
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <View style={{ flex: 1 }}>
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={[
+              styles.container,
+              {
+                flexGrow: 1,
+                justifyContent: 'center',
+                backgroundColor: temaAtual.fundo,
+                paddingBottom: 40,
+              },
+            ]}
+          >
+            <Text style={[styles.title, { color: temaAtual.texto }]}>
+              {editar ? 'Editar Medicamento' : 'Cadastrar Medicamento'}
+            </Text>
 
-      <TextInput style={styles.input} placeholder="Nome" value={nome} onChangeText={setNome} />
-      <TextInput style={styles.input} placeholder="Dose" value={dose} onChangeText={setDose} />
-      <TextInput
-        style={styles.input}
-        placeholder="Observações (opcional)"
-        value={observacoes}
-        onChangeText={setObservacoes}
-      />
+            <TextInput
+              style={[
+                styles.input,
+                {
+                  backgroundColor:
+                    temaAtual.fundo === '#cce6ff' ? '#fff' : '#003366',
+                  color: temaAtual.texto,
+                },
+              ]}
+              placeholder="Nome"
+              placeholderTextColor={temaAtual.texto + '99'}
+              value={nome}
+              onChangeText={setNome}
+            />
 
-      <View style={styles.switchContainer}>
-        <Text style={styles.switchLabel}>Deseja ser notificado?</Text>
-        <Switch value={notificar} onValueChange={setNotificar} />
-      </View>
+            <TextInput
+              style={[
+                styles.input,
+                {
+                  backgroundColor:
+                    temaAtual.fundo === '#cce6ff' ? '#fff' : '#003366',
+                  color: temaAtual.texto,
+                },
+              ]}
+              placeholder="Dose"
+              placeholderTextColor={temaAtual.texto + '99'}
+              value={dose}
+              onChangeText={setDose}
+            />
 
-      {notificar && (
-        <>
-          <View style={styles.switchContainer}>
-            <Text style={styles.switchLabel}>Modo:</Text>
-            <TouchableOpacity onPress={() => setModoNotificacao('horarios')}>
-              <Text style={{ color: modoNotificacao === 'horarios' ? '#fff' : '#ccc' }}>Horários</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => setModoNotificacao('intervalo')}>
-              <Text style={{ color: modoNotificacao === 'intervalo' ? '#fff' : '#ccc' }}>A cada X horas</Text>
-            </TouchableOpacity>
-          </View>
+            <TextInput
+              style={[
+                styles.input,
+                {
+                  backgroundColor:
+                    temaAtual.fundo === '#cce6ff' ? '#fff' : '#003366',
+                  color: temaAtual.texto,
+                },
+              ]}
+              placeholder="Observações (opcional)"
+              placeholderTextColor={temaAtual.texto + '99'}
+              value={observacoes}
+              onChangeText={setObservacoes}
+            />
 
-          {modoNotificacao === 'horarios' ? (
-            <>
-              {horarios.map((h, i) => (
-                <TouchableOpacity
-                  key={i}
-                  onPress={() => setMostrarIndex(i)}
-                  style={styles.horarioButton}
-                >
-                  <Text style={styles.horarioText}>Horário {i + 1}: {formatarHorario(h)}</Text>
-                </TouchableOpacity>
-              ))}
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 }}>
-                <Button
-                  title="Adicionar horário"
-                  onPress={() => setHorarios([...horarios, new Date()])}
-                />
-                {horarios.length > 1 && (
-                  <Button
-                    title="Remover último"
-                    color="red"
-                    onPress={() => setHorarios(horarios.slice(0, -1))}
+            <View style={styles.switchContainer}>
+              <Text style={[styles.switchLabel, { color: temaAtual.texto }]}>
+                Deseja ser notificado?
+              </Text>
+              <Switch value={notificar} onValueChange={setNotificar} />
+            </View>
+
+            {notificar && (
+              <>
+                <View style={styles.switchContainer}>
+                  <Text style={[styles.switchLabel, { color: temaAtual.texto }]}>
+                    Modo:
+                  </Text>
+                  <TouchableOpacity onPress={() => setModoNotificacao('horarios')}>
+                    <Text
+                      style={{
+                        color:
+                          modoNotificacao === 'horarios'
+                            ? temaAtual.botaoFundo
+                            : '#ccc',
+                        marginRight: 10,
+                      }}
+                    >
+                      Horários
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => setModoNotificacao('intervalo')}>
+                    <Text
+                      style={{
+                        color:
+                          modoNotificacao === 'intervalo'
+                            ? temaAtual.botaoFundo
+                            : '#ccc',
+                      }}
+                    >
+                      A cada X horas
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
+                {modoNotificacao === 'horarios' ? (
+                  <>
+                    {horarios.map((h, i) => (
+                      <TouchableOpacity
+                        key={i}
+                        onPress={() => setMostrarIndex(i)}
+                        style={[
+                          styles.horarioButton,
+                          {
+                            backgroundColor:
+                              temaAtual.fundo === '#cce6ff'
+                                ? '#fff'
+                                : '#003366',
+                          },
+                        ]}
+                      >
+                        <Text style={[styles.horarioText, { color: temaAtual.texto }]}>
+                          Horário {i + 1}: {formatarHorario(h)}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                        marginBottom: 15,
+                      }}
+                    >
+                      <Button
+                        title="Adicionar horário"
+                        onPress={() => setHorarios([...horarios, new Date()])}
+                        color={temaAtual.botaoFundo}
+                      />
+                      {horarios.length > 1 && (
+                        <Button
+                          title="Remover último"
+                          color="red"
+                          onPress={() => setHorarios(horarios.slice(0, -1))}
+                        />
+                      )}
+                    </View>
+
+                    <TimePicker
+                      dataHora={horarios[mostrarIndex]}
+                      setDataHora={(date) => atualizarHorario(mostrarIndex, date)}
+                      mostrar={mostrarIndex !== null}
+                      setMostrar={() => setMostrarIndex(null)}
+                    />
+                  </>
+                ) : (
+                  <TextInput
+                    style={[
+                      styles.input,
+                      {
+                        backgroundColor:
+                          temaAtual.fundo === '#cce6ff' ? '#fff' : '#003366',
+                        color: temaAtual.texto,
+                      },
+                    ]}
+                    placeholder="A cada quantas horas?"
+                    placeholderTextColor={temaAtual.texto + '99'}
+                    value={intervaloHoras}
+                    onChangeText={(text) => setIntervaloHoras(text.replace(/[^0-9]/g, ''))}
+                    keyboardType="numeric"
                   />
                 )}
-              </View>
+              </>
+            )}
 
-              <TimePicker
-                dataHora={horarios[mostrarIndex]}
-                setDataHora={(date) => atualizarHorario(mostrarIndex, date)}
-                mostrar={mostrarIndex !== null}
-                setMostrar={() => setMostrarIndex(null)}
+            <View style={{ marginTop: 20 }}>
+              <Button
+                title={editar ? 'Salvar Alterações' : 'Salvar Medicamento'}
+                onPress={handleSalvar}
+                color={temaAtual.botaoFundo}
               />
-            </>
-          ) : (
-            <TextInput
-              style={styles.input}
-              placeholder="A cada quantas horas?"
-              value={intervaloHoras}
-              onChangeText={text => setIntervaloHoras(text.replace(/[^0-9]/g, ''))}
-              keyboardType="numeric"
-            />
-          )}
-        </>
-      )}
-
-      <Button
-        title={editar ? 'Salvar Alterações' : 'Salvar Medicamento'}
-        onPress={handleSalvar}
-        color="#007AFF"
-      />
-    </ScrollView>
+            </View>
+          </ScrollView>
+        </View>
+      </TouchableWithoutFeedback>
+    </KeyboardAvoidingView>
   );
 };
 
 export default CadastrarMedicamento;
-
-const styles = StyleSheet.create({
-  container: { padding: 20, backgroundColor: '#001f3f' },
-  title: { color: '#fff', fontSize: 24, textAlign: 'center', marginBottom: 20 },
-  input: {
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 10,
-    marginBottom: 15,
-  },
-  horarioButton: {
-    backgroundColor: '#fff',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 10,
-  },
-  horarioText: { color: '#000' },
-  switchContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  switchLabel: { color: '#fff', fontSize: 16 },
-});

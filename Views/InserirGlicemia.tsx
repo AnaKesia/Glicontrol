@@ -5,6 +5,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { useGlicemia } from '../hooks/usoGlicemia';
 import { useConfiguracoes, tamanhosFonte } from './Configuracoes';
 import { TimePicker } from '../hooks/TimePicker';
+import { criarEstilos } from '../estilos/inserirGlicemia';
 
 const InserirGlicemia = () => {
   const navigation = useNavigation();
@@ -73,34 +74,3 @@ const InserirGlicemia = () => {
 };
 
 export default InserirGlicemia;
-
-const criarEstilos = (tema, fonte) =>
-  StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: tema.fundo,
-      padding: 20,
-      justifyContent: 'center',
-    },
-    title: {
-      fontSize: fonte + 6,
-      color: tema.texto,
-      marginBottom: 20,
-      textAlign: 'center',
-    },
-    input: {
-      backgroundColor: tema.inputFundo || '#fff',
-      color: '#000000',
-      fontSize: fonte,
-      borderRadius: 8,
-      paddingHorizontal: 10,
-      paddingVertical: 10,
-      marginBottom: 15,
-    },
-    horaSelecionada: {
-      color: tema.texto,
-      fontSize: fonte,
-      marginBottom: 15,
-      textAlign: 'center',
-    },
-  });
