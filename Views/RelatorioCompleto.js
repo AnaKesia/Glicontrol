@@ -1,15 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, ActivityIndicator,
-  TouchableOpacity, Share, Dimensions, ScrollView,
-} from 'react-native';
+  TouchableOpacity, Share, Dimensions, ScrollView } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
 import { format } from 'date-fns';
 import { LineChart } from 'react-native-chart-kit';
-import { captureRef } from 'react-native-view-shot';
-import { Image } from 'react-native';
-import ViewShot from 'react-native-view-shot';
 import { useConfiguracoes, tamanhosFonte } from './Configuracoes';
 
 function formatarData(timestamp) {
@@ -254,6 +250,92 @@ const RelatorioCompleto = () => {
   const [mesSelecionado, setMesSelecionado] = useState(new Date().getMonth() + 1);
   const [anoSelecionado, setAnoSelecionado] = useState(new Date().getFullYear());
 
+  const { config, temas, tamanhosFonte } = useConfiguracoes();
+  const temaAtual = temas[config.tema];
+  const tamanhoFonteAtual = tamanhosFonte[config.fonte];
+
+  const criarEstilos = (tema, tamanhoFonte) => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: tema.fundo,
+      padding: 20,
+    },
+    titulo: {
+      color: tema.texto,
+      fontSize: tamanhoFonte + 4,
+      fontWeight: 'bold',
+      marginBottom: 20,
+      textAlign: 'center',
+    },
+    filtros: {
+      marginBottom: 15,
+    },
+    filtrosMesAno: {
+      flexDirection: 'row',
+      marginBottom: 15,
+    },
+    filtrosAno: {
+      marginBottom: 15,
+    },
+    picker: {
+      color: tema.texto,
+      backgroundColor: tema.fundo === '#cce6ff' ?  '#ADD8E6' : '#003366',
+    },
+    texto: {
+      color: tema.texto,
+      fontSize: tamanhoFonte,
+      marginVertical: 2,
+    },
+    subtitulo: {
+      fontSize: tamanhoFonte + 2,
+      fontWeight: 'bold',
+      color: tema.texto,
+      marginBottom: 8,
+    },
+    registroBox: {
+      borderWidth: 1,
+      borderColor: tema.botaoFundo,
+      padding: 10,
+      borderRadius: 10,
+      marginBottom: 15,
+    },
+    label: {
+      fontWeight: 'bold',
+      color: tema.texto,
+    },
+    botao: {
+      backgroundColor: tema.botaoFundo,
+      padding: 12,
+      borderRadius: 10,
+      alignItems: 'center',
+      marginTop: 20,
+    },
+    botaoTexto: {
+      color: tema.botaoTexto,
+      fontSize: tamanhoFonte,
+      fontWeight: 'bold',
+    },
+    sectionBox: {
+      borderWidth: 1,
+      borderColor: tema.botaoFundo,
+      padding: 10,
+      borderRadius: 10,
+      marginBottom: 10,
+    },
+    scrollContent: {
+      paddingBottom: 100,
+    },
+    botaoContainer: {
+      position: 'absolute',
+      bottom: 20,
+      left: 20,
+      right: 20,
+      alignItems: 'center',
+    },
+  });
+
+  const estilos = criarEstilos(temaAtual, tamanhoFonteAtual);
+
   useEffect(() => {
     const carregarDados = async () => {
       setCarregando(true);
@@ -302,14 +384,13 @@ const RelatorioCompleto = () => {
 
   if (carregando) {
     return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color="#007AFF" />
+      <View style={estilos.container}>
+        <ActivityIndicator size="large" color={temaAtual.botaoFundo} />
       </View>
     );
   }
 
   const screenWidth = Dimensions.get('window').width - 75;
-  // Dados filtrados conforme o intervalo
   const intervalo = calcularIntervaloPorFiltro(filtro, mesSelecionado, anoSelecionado);
   const registrosFiltrados = registros.filter(r => {
     const data = r.timestamp.toDate ? r.timestamp.toDate() : new Date(r.timestamp);
@@ -320,11 +401,11 @@ const RelatorioCompleto = () => {
   });
 
   const chartData = {
-    labels: registrosFiltrados.map((_, i) => ''), // Sem rótulos no eixo X
+    labels: registrosFiltrados.map((_, i) => ''), // sem rótulos
     datasets: [
       {
         data: registrosFiltrados.map(r => Number(r.valor)),
-        color: () => '#007AFF',
+        color: () => temaAtual.botaoFundo,
         strokeWidth: 2,
       },
     ],
@@ -332,11 +413,11 @@ const RelatorioCompleto = () => {
 
   return (
     <View style={{ flex: 1 }}>
-      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
-        <Text style={styles.titulo}>Relatório Completo</Text>
+      <ScrollView style={estilos.container} contentContainerStyle={estilos.scrollContent}>
+        <Text style={estilos.titulo}>Relatório Completo</Text>
 
-        <View style={styles.filtros}>
-          <Picker selectedValue={filtro} onValueChange={setFiltro} style={styles.picker}>
+        <View style={estilos.filtros}>
+          <Picker selectedValue={filtro} onValueChange={setFiltro} style={estilos.picker}>
             <Picker.Item label="Últimos 7 dias" value="ultimos7" />
             <Picker.Item label="Últimos 30 dias" value="ultimos30" />
             <Picker.Item label="Todos os dados" value="todos" />
@@ -346,13 +427,13 @@ const RelatorioCompleto = () => {
         </View>
 
         {filtro === 'mesAno' && (
-          <View style={styles.filtrosMesAno}>
-            <Picker selectedValue={mesSelecionado} onValueChange={setMesSelecionado} style={[styles.picker, { flex: 1, marginRight: 5 }]}>
+          <View style={estilos.filtrosMesAno}>
+            <Picker selectedValue={mesSelecionado} onValueChange={setMesSelecionado} style={[estilos.picker, { flex: 1, marginRight: 5, color: temaAtual.texto }]}>
               {[...Array(12)].map((_, i) => (
                 <Picker.Item key={i} label={`Mês ${i + 1}`} value={i + 1} />
               ))}
             </Picker>
-            <Picker selectedValue={anoSelecionado} onValueChange={setAnoSelecionado} style={[styles.picker, { flex: 1 }]}>
+            <Picker selectedValue={anoSelecionado} onValueChange={setAnoSelecionado} style={[estilos.picker, { flex: 1 }]}>
               {Array.from({ length: 15 }, (_, i) => 2018 + i).map(ano => (
                 <Picker.Item key={ano} label={`${ano}`} value={ano} />
               ))}
@@ -361,8 +442,8 @@ const RelatorioCompleto = () => {
         )}
 
         {filtro === 'ano' && (
-          <View style={styles.filtrosAno}>
-            <Picker selectedValue={anoSelecionado} onValueChange={setAnoSelecionado} style={[styles.picker, { flex: 1 }]}>
+          <View style={estilos.filtrosAno}>
+            <Picker selectedValue={anoSelecionado} onValueChange={setAnoSelecionado} style={[estilos.picker, { flex: 1 }]}>
               {Array.from({ length: 15 }, (_, i) => 2018 + i).map(ano => (
                 <Picker.Item key={ano} label={`${ano}`} value={ano} />
               ))}
@@ -370,74 +451,66 @@ const RelatorioCompleto = () => {
           </View>
         )}
 
-        <View style={styles.sectionBox}>
-          <Text style={styles.subtitulo}>Gráfico de Variação</Text>
+        <View style={estilos.sectionBox}>
+          <Text style={estilos.subtitulo}>Gráfico de Variação</Text>
           <LineChart
             data={chartData}
             width={screenWidth}
             height={220}
             chartConfig={{
-              backgroundGradientFrom: '#001f3f',
-              backgroundGradientTo: '#001f3f',
-              color: () => '#00aced',
-              labelColor: () => '#ffffff',
-              propsForDots: {
-                r: '3',
-                strokeWidth: '1',
-                stroke: '#007AFF',
-              },
-              propsForBackgroundLines: {
-                stroke: '#003366',
-              },
+              backgroundGradientFrom: temaAtual.fundo,
+              backgroundGradientTo: temaAtual.fundo,
+              color: () => temaAtual.botaoFundo,
+              labelColor: () => temaAtual.texto,
+              propsForDots: { r: '3', strokeWidth: '1', stroke: temaAtual.botaoFundo },
+              propsForBackgroundLines: { stroke: temaAtual.texto + '33' }, // leve transparência
             }}
             withDots={true}
             withShadow={false}
             withInnerLines={true}
             withOuterLines={false}
             withHorizontalLabels={true}
-            withVerticalLabels={false} // sem rótulos de data
+            withVerticalLabels={false}
             bezier
-            style={{
-              borderRadius: 10,
-            }}
+            style={{ borderRadius: 10 }}
           />
         </View>
 
         {(alertas.length === 0 && sintomasTexto.length === 0) ? (
-          <Text style={styles.texto}>Nenhum alerta ou associação de sintomas para exibir.</Text>
+          <Text style={estilos.texto}>Nenhum alerta ou associação de sintomas para exibir.</Text>
         ) : (
           <>
-            <View style={styles.sectionBox}>
-              <Text style={styles.subtitulo}>Alertas da análise:</Text>
+            <View style={estilos.sectionBox}>
+              <Text style={estilos.subtitulo}>Alertas da análise:</Text>
               {alertas.map((item, i) => (
-                <Text key={`alerta-${i}`} style={styles.texto}>• {item}</Text>
+                <Text key={`alerta-${i}`} style={estilos.texto}>• {item}</Text>
               ))}
             </View>
 
-            <View style={[styles.sectionBox, { marginTop: 10 }]}>
-              <Text style={styles.subtitulo}>Conclusões sobre sintomas:</Text>
+            <View style={estilos.sectionBox}>
+              <Text style={estilos.subtitulo}>Conclusões sobre sintomas:</Text>
               {sintomasTexto.map((item, i) => (
-                <Text key={`sintoma-${i}`} style={styles.texto}>• {item}</Text>
+                <Text key={`sintoma-${i}`} style={estilos.texto}>• {item}</Text>
               ))}
             </View>
           </>
         )}
 
-        <Text style={[styles.subtitulo, { marginTop: 20 }]}>Medições:</Text>
+        <Text style={[estilos.subtitulo, { marginTop: 20 }]}>Medições:</Text>
         {registros.map((item) => (
-          <View key={item.id} style={styles.registroBox}>
-            <Text style={styles.texto}><Text style={styles.label}>Data:</Text> {formatarData(item.timestamp)}</Text>
-            <Text style={styles.texto}><Text style={styles.label}>Valor:</Text> {item.valor ?? 'N/A'} mg/dL</Text>
+          <View key={item.id} style={estilos.registroBox}>
+            <Text style={estilos.texto}><Text style={estilos.label}>Data:</Text> {formatarData(item.timestamp)}</Text>
+            <Text style={estilos.texto}><Text style={estilos.label}>Valor:</Text> {item.valor ?? 'N/A'} mg/dL</Text>
             {item.sintomas && item.sintomas.length > 0 && (
-              <Text style={styles.texto}><Text style={styles.label}>Sintomas:</Text> {item.sintomas.join(', ')}</Text>
+              <Text style={estilos.texto}><Text style={estilos.label}>Sintomas:</Text> {item.sintomas.join(', ')}</Text>
             )}
           </View>
         ))}
       </ScrollView>
 
-      <View style={styles.botaoContainer}>
-        <TouchableOpacity onPress={compartilharRelatorio} style={styles.botao}>
-          <Text style={styles.botaoTexto}>Compartilhar Relatório</Text>
+      <View style={estilos.botaoContainer}>
+        <TouchableOpacity onPress={compartilharRelatorio} style={estilos.botao}>
+          <Text style={estilos.botaoTexto}>Compartilhar Relatório</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -445,81 +518,3 @@ const RelatorioCompleto = () => {
 };
 
 export default RelatorioCompleto;
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#001f3f',
-    padding: 20,
-  },
-  titulo: {
-    color: '#fff',
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  filtros: {
-    marginBottom: 15,
-  },
-  filtrosMesAno: {
-    flexDirection: 'row',
-    marginBottom: 15,
-  },
-  filtrosAno: {
-    marginBottom: 15,
-  },
-  picker: {
-    color: '#fff',
-    backgroundColor: '#003366',
-  },
-  texto: {
-    color: '#fff',
-    fontSize: 16,
-    marginVertical: 2,
-  },
-  subtitulo: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 8,
-  },
-  registroBox: {
-    borderWidth: 1,
-    borderColor: '#007AFF',
-    padding: 10,
-    borderRadius: 10,
-    marginBottom: 15,
-  },
-  label: {
-    fontWeight: 'bold',
-  },
-  botao: {
-    backgroundColor: '#007AFF',
-    padding: 12,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  botaoTexto: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  sectionBox: {
-    borderWidth: 1,
-    borderColor: '#007AFF',
-    padding: 10,
-    borderRadius: 10,
-  },
-  scrollContent: {
-    paddingBottom: 100,
-  },
-  botaoContainer: {
-    position: 'absolute',
-    bottom: 20,
-    left: 20,
-    right: 20,
-    alignItems: 'center',
-  },
-});

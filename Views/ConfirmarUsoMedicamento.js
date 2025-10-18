@@ -1,15 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  Switch,
-  Alert,
-  TouchableOpacity,
-  ScrollView,
+  View, Text, StyleSheet, TextInput,
+  Switch, Alert, TouchableOpacity, ScrollView, Platform,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
 import { useConfiguracoes } from './Configuracoes';
@@ -27,6 +22,11 @@ const ConfirmarUsoMedicamento = ({ route, navigation }) => {
   );
   const [tomou, setTomou] = useState(dados?.tomou ?? true);
   const [observacoes, setObservacoes] = useState(dados?.observacoes || '');
+
+  const [dataHora, setDataHora] = useState(
+    dados?.timestamp?.toDate ? dados.timestamp.toDate() : new Date()
+  );
+  const [mostrarPicker, setMostrarPicker] = useState(false);
 
   const { config, temas, tamanhosFonte } = useConfiguracoes();
   const tema = temas[config.tema];
@@ -76,6 +76,11 @@ const ConfirmarUsoMedicamento = ({ route, navigation }) => {
         Nome: dados.NomeMedicamento || 'Desconhecido',
       };
 
+    const timestampFinal =
+      editar && dados?.timestamp?.toDate
+        ? new Date(dataHora)
+        : new Date(dataHora);
+
     const registro = {
       usuarioId: userId,
       medicamentoId: medicamentoSelecionado,
@@ -83,7 +88,7 @@ const ConfirmarUsoMedicamento = ({ route, navigation }) => {
       dose: parseFloat(dose),
       tomou,
       observacoes: observacoes.trim(),
-      timestamp: new Date(),
+      timestamp: timestampFinal,
     };
 
     try {
@@ -142,6 +147,28 @@ const ConfirmarUsoMedicamento = ({ route, navigation }) => {
         placeholder="Digite a dose"
         placeholderTextColor={tema.texto + '88'}
       />
+
+      <Text style={styles.label}>Data e hora:</Text>
+      <TouchableOpacity
+        style={styles.input}
+        onPress={() => setMostrarPicker(true)}
+      >
+        <Text style={{ color: '#000' }}>
+          {dataHora.toLocaleDateString()} {dataHora.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+        </Text>
+      </TouchableOpacity>
+
+      {mostrarPicker && (
+        <DateTimePicker
+          value={dataHora}
+          mode="datetime"
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          onChange={(event, date) => {
+            setMostrarPicker(false);
+            if (date) setDataHora(date);
+          }}
+        />
+      )}
 
       <Text style={styles.label}>Observações (opcional):</Text>
       <TextInput

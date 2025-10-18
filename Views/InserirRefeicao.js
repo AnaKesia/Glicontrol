@@ -36,7 +36,6 @@ const InserirRefeicao = () => {
       return;
     }
 
-    // ✅ Verifica se o usuário está autenticado
     const currentUser = auth().currentUser;
     if (!currentUser) {
       Alert.alert('Erro', 'Usuário não autenticado. Faça login novamente.');
