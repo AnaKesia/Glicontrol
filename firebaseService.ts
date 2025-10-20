@@ -49,13 +49,13 @@ export const deletarMedicao = async (id) => {
 };
 
 
-export const criarRefeicao = async (tipo, calorias, observacao, data) => {
+export const criarRefeicao = async (tipo, calorias, observacoes, data) => {
   const userId = auth().currentUser.uid;
 
   return await firestore().collection('refeicoes').add({
     tipo,
     calorias,
-    observacao,
+    observacoes,
     usuarioId: userId,
     timestamp: firestore.Timestamp.fromDate(new Date(data)),
   });
