@@ -20,8 +20,8 @@ const HomeScreen = () => {
   const [labels, setLabels] = useState([]);
   const [glicemias, setGlicemias] = useState([]);
   const [alertaRecente, setAlertaRecente] = useState(null);
+  const [proximoMedicamento, setProximoMedicamento] = useState(null);
 
-  // Pegar tema e fonte do contexto
   const { config } = useConfiguracoes();
   const tema = temas[config.tema] || temas.escuro;
   const fonte = tamanhosFonte[config.fonte] || tamanhosFonte.media;
@@ -63,6 +63,64 @@ const HomeScreen = () => {
       }
     } catch (error) {
       Alert.alert('Erro', 'Falha ao carregar medições: ' + error.message);
+    }
+  };
+
+  const carregarProximoMedicamento = async () => {
+    const usuario = auth().currentUser;
+    if (!usuario) return;
+
+    try {
+      const querySnapshot = await firestore()
+        .collection('medicamentos')
+        .where('userid', '==', usuario.uid)
+        .get();
+
+      const agora = new Date();
+      let proximo = null;
+      let menorDiferenca = Infinity;
+
+      querySnapshot.forEach(doc => {
+        const medicamento = doc.data();
+
+        if (Array.isArray(medicamento.Horarios)) {
+          medicamento.Horarios.forEach(horario => {
+            const [hora, minuto] = horario.split(':').map(Number);
+            const dataHorario = new Date();
+            dataHorario.setHours(hora, minuto, 0, 0);
+
+            if (dataHorario < agora) {
+              dataHorario.setDate(dataHorario.getDate() + 1);
+            }
+
+            const diferenca = dataHorario - agora;
+            if (diferenca < menorDiferenca) {
+              menorDiferenca = diferenca;
+              proximo = { ...medicamento, horarioProximo: horario };
+            }
+          });
+        }
+        // Caso tenha apenas um horário
+        else if (medicamento.Horário) {
+          const [hora, minuto] = medicamento.Horário.split(':').map(Number);
+          const dataHorario = new Date();
+          dataHorario.setHours(hora, minuto, 0, 0);
+
+          if (dataHorario < agora) {
+            dataHorario.setDate(dataHorario.getDate() + 1);
+          }
+
+          const diferenca = dataHorario - agora;
+          if (diferenca < menorDiferenca) {
+            menorDiferenca = diferenca;
+            proximo = { ...medicamento, horarioProximo: medicamento.Horário };
+          }
+        }
+      });
+
+      setProximoMedicamento(proximo);
+    } catch (error) {
+      console.error('Erro ao buscar próximo medicamento:', error);
     }
   };
 
@@ -168,6 +226,7 @@ const HomeScreen = () => {
   useFocusEffect(
     useCallback(() => {
       carregarMedicoes();
+      carregarProximoMedicamento();
     }, [])
   );
 
@@ -217,7 +276,7 @@ const HomeScreen = () => {
               stroke: tema.texto,
             },
             propsForBackgroundLines: {
-              stroke: tema.texto + '33', // linha de grade transparente
+              stroke: tema.texto + '33',
             },
           }}
           bezier
@@ -248,6 +307,26 @@ const HomeScreen = () => {
         >
           {alertaRecente || 'Tudo sob controle nos últimos dias.'}
         </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.medicamentoContainer}
+        onPress={() => navigation.navigate('Medicamentos')}
+      >
+        <Text style={styles.medicamentoTitulo}>💊 Próximo Medicamento</Text>
+        {proximoMedicamento ? (
+          <>
+            <Text style={styles.medicamentoNome}>{proximoMedicamento.Nome}</Text>
+            <Text style={styles.medicamentoDetalhe}>Dose: {proximoMedicamento.Dose}</Text>
+            <Text style={styles.medicamentoDetalhe}>
+              Horário: {proximoMedicamento.horarioProximo}
+            </Text>
+          </>
+        ) : (
+          <Text style={styles.medicamentoDetalhe}>
+            Nenhum medicamento agendado.
+          </Text>
+        )}
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.fab} onPress={() => navigation.navigate('InserirGlicemia')}>

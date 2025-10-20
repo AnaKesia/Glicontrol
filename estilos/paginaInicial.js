@@ -47,4 +47,35 @@ export const criarEstilos = (tema, fonte) =>
     alertaTexto: {
       fontSize: fonte - 2,
     },
+    medicamentoContainer: {
+      backgroundColor: tema.botaoFundo,
+      borderRadius: 10,
+      padding: 15,
+      marginTop: 20,
+      alignSelf: 'center',
+      width: '100%',
+      shadowColor: '#000',
+      shadowOpacity: 0.25,
+      shadowOffset: { width: 0, height: 2 },
+      shadowRadius: 4,
+      elevation: 3,
+    },
+
+    medicamentoTitulo: {
+      color: '#fff',
+      fontSize: fonte + 2,
+      fontWeight: 'bold',
+      marginBottom: 5,
+    },
+
+    medicamentoNome: {
+      color: '#fff',
+      fontSize: fonte + 1,
+      fontWeight: '600',
+    },
+
+    medicamentoDetalhe: {
+      color: '#fff',
+      fontSize: fonte,
+    },
   });

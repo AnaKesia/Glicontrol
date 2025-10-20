@@ -1,7 +1,5 @@
 
-const GEMINI_API_KEY = 'AIzaSyDuWZbdbK6JWq-vyVheQjK4H2TZXrteT6U';
-//AIzaSyDqH5QxZxhb8SpQ-_LEmhTteXmzYmpSHgE
-//AIzaSyA1sxQnGDtnFSASlZynLTQ870206eeNAuo
+const GEMINI_API_KEY = 'AIzaSyBCk4xCPogLKE6ml1AMVKzkNjU6hQc2Vgk';
 
 const MODEL_NAME = 'gemini-2.5-flash';
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${GEMINI_API_KEY}`;

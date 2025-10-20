@@ -10,6 +10,7 @@ import PaginaInicial from './Views/PaginaInicial';
 import InserirGlicemia from './Views/InserirGlicemia';
 import ListaMedicoes from './Views/ListaMedicoes';
 import CadastrarMedicamento from './Views/CadastrarMedicamento';
+import ListaRemedios from './Views/ListaRemedios';
 import ListaRefeicoes from './Views/ListaRefeicoes';
 import InserirRefeicao from './Views/InserirRefeicao';
 import DrawerNavigator from './Views/DrawerNavigator';
@@ -65,6 +66,7 @@ export default function App() {
               <Stack.Screen name="InserirRefeicao" component={InserirRefeicao} />
               <Stack.Screen name="RegistrarSintoma" component={RegistrarSintoma} />
               <Stack.Screen name="ListaSintomas" component={ListaSintomas} />
+              <Stack.Screen name="ListaRemedios" component={ListaRemedios} />
               <Stack.Screen name="ConfirmarUsoMedicamento" component={ConfirmarUsoMedicamento} />
               <Stack.Screen name="ListaUsoMedicamento" component={ListaUsoMedicamento} />
               <Stack.Screen name="Relatorios" component={Relatorios} />

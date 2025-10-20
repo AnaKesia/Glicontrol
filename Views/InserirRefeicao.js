@@ -10,6 +10,8 @@ import { useConfiguracoes, tamanhosFonte } from './Configuracoes';
 import { TimePicker } from '../hooks/TimePicker';
 import { analisarImpactoGlicemicoGemini } from '../services/AnaliseGlicemicaIA';
 import { criarEstilos } from '../estilos/inserirRefeicao';
+import { launchImageLibrary } from 'react-native-image-picker';
+import { analisarImagemRefeicao } from '../services/analiseImagemIA';
 
 const tiposRefeicao = ['Café da Manhã', 'Almoço', 'Lanche', 'Jantar', 'Outro'];
 
@@ -30,6 +32,38 @@ const InserirRefeicao = () => {
   const [observacoes, setObservacoes] = useState(refeicao?.observacoes || '');
   const [data, setData] = useState(refeicao?.timestamp?.toDate() || new Date());
   const [mostrarData, setMostrarData] = useState(false);
+
+   const analisarImagem = async () => {
+     try {
+       const result = await launchImageLibrary({
+         mediaType: 'photo',
+         quality: 0.8,
+         includeBase64: true,
+       });
+
+       if (result.assets && result.assets.length > 0) {
+         const asset = result.assets[0];
+
+         if (!asset.base64) {
+           Alert.alert('Erro', 'Não foi possível obter a imagem em base64.');
+           return;
+         }
+
+         setObservacoes(prev => (prev ? prev + '\nPor favor, aguarde um momento...' : 'Por favor, aguarde um momento...'));
+
+         const textoGerado = await analisarImagemRefeicao(asset.base64, asset.type);
+
+         setObservacoes(prev => {
+           const linhas = prev.split('\n').filter(linha => linha !== 'Por favor, aguarde um momento...');
+           const novoTexto = linhas.length > 0 ? linhas.join('\n') + '\n' + textoGerado : textoGerado;
+           return novoTexto;
+         });
+       }
+     } catch (err) {
+       console.error('Erro ao analisar imagem:', err);
+       Alert.alert('Erro', 'Não foi possível analisar a imagem.');
+     }
+   };
 
   const salvar = async () => {
     if (!tipo || !observacoes.trim()) {
@@ -89,7 +123,16 @@ const InserirRefeicao = () => {
 
       if (precisaReanalisar && observacoes.trim() !== '') {
         try {
+          setObservacoes(prev => (prev ? prev + '\nPor favor, aguarde um momento...' : 'Por favor, aguarde um momento...'));
+
           const explicacao = await analisarImpactoGlicemicoGemini(observacoes);
+
+          setObservacoes(prev => {
+            const linhas = prev.split('\n').filter(linha => linha !== 'Por favor, aguarde um momento...');
+            const novoTexto = linhas.length > 0 ? linhas.join('\n') + '\n' + explicacao : explicacao;
+            return novoTexto;
+          });
+
           await docRef.update({ analiseGlicemica: explicacao });
         } catch (err) {
           console.error('Erro na IA:', err);
@@ -131,6 +174,10 @@ const InserirRefeicao = () => {
         placeholder="Ex: 350"
         placeholderTextColor="#888"
       />
+
+      <TouchableOpacity style={styles.imageButton} onPress={analisarImagem}>
+        <Text style={styles.imageButtonText}>📷 Analisar Imagem</Text>
+      </TouchableOpacity>
 
       <Text style={styles.label}>Observações:</Text>
       <TextInput

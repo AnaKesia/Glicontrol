@@ -52,4 +52,15 @@ export const criarEstilos = (tema, fontSize) =>
       fontWeight: 'bold',
       fontSize,
     },
+    imageButton: {
+      backgroundColor: '#4CAF50',
+      padding: 10,
+      borderRadius: 8,
+      marginVertical: 5,
+      alignItems: 'center',
+    },
+    imageButtonText: {
+      color: '#fff',
+      fontWeight: 'bold',
+    },
   });
