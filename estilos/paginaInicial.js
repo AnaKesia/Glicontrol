@@ -6,6 +6,7 @@ export const criarEstilos = (tema, fonte) =>
       flex: 1,
       backgroundColor: tema.fundo,
       padding: 20,
+      paddingBottom: 80,
     },
     title: {
       fontSize: fonte + 2,
@@ -20,7 +21,7 @@ export const criarEstilos = (tema, fonte) =>
     },
     fab: {
       position: 'absolute',
-      bottom: 30,
+      bottom: 75,
       right: 30,
       backgroundColor: tema.botaoFundo,
       width: 60,
@@ -60,22 +61,42 @@ export const criarEstilos = (tema, fonte) =>
       shadowRadius: 4,
       elevation: 3,
     },
-
     medicamentoTitulo: {
       color: '#fff',
       fontSize: fonte + 2,
       fontWeight: 'bold',
       marginBottom: 5,
     },
-
     medicamentoNome: {
       color: '#fff',
       fontSize: fonte + 1,
       fontWeight: '600',
     },
-
     medicamentoDetalhe: {
       color: '#fff',
       fontSize: fonte,
+    },
+    footer: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      height: 60,
+      backgroundColor: tema.botaoFundo,
+      flexDirection: 'row',
+      justifyContent: 'space-around',
+      alignItems: 'center',
+      borderTopLeftRadius: 15,
+      borderTopRightRadius: 15,
+      elevation: 10,
+    },
+    footerButton: {
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    footerText: {
+      color: tema.texto,
+      fontSize: fonte - 2,
+      marginTop: 4,
     },
   });

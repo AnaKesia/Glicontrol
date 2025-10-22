@@ -28,7 +28,6 @@ const LoginScreen = () => {
       const { user } = await login(email, senha);
       Alert.alert('Sucesso', 'Login realizado com sucesso!');
       console.log('Usuário logado:', user.email);
-      navigation.navigate('PaginaInicial');
     } catch (error) {
       Alert.alert('Erro de login', error.message);
     }

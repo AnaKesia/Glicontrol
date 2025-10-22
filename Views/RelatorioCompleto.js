@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, ActivityIndicator,
-  TouchableOpacity, Share, Dimensions, ScrollView } from 'react-native';
+  TouchableOpacity, Dimensions, ScrollView } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
@@ -8,6 +8,10 @@ import { format } from 'date-fns';
 import { LineChart } from 'react-native-chart-kit';
 import { useConfiguracoes, tamanhosFonte } from './Configuracoes';
 import { criarEstilos } from '../estilos/relatorioCompleto';
+import RNHTMLtoPDF from 'react-native-html-to-pdf';
+import RNFS from 'react-native-fs';
+import { Alert } from 'react-native';
+import Share from 'react-native-share';
 
 function formatarData(timestamp) {
   try {
@@ -277,11 +281,31 @@ const RelatorioCompleto = () => {
   }, [filtro, mesSelecionado, anoSelecionado]);
 
   const compartilharRelatorio = async () => {
-    const texto = [
-      '📊 Relatório de Glicemia', '',
-      '🔔 Alertas:', ...alertas,
+    try {
+      const opcoes = ['📘 JSON', '🧾 CSV', '📝 TXT', 'Cancelar'];
+      Alert.alert(
+        'Compartilhar relatório',
+        'Escolha o formato de compartilhamento:',
+        opcoes.slice(0, 3).map((opcao, i) => ({
+          text: opcao,
+          onPress: () => compartilharComo(opcoes[i]),
+        })),
+        { cancelable: true }
+      );
+    } catch (error) {
+      console.error('Erro ao exibir opções de compartilhamento:', error);
+    }
+  };
+
+  const compartilharComo = async (formato) => {
+    const conteudoTexto = [
+      '📊 Relatório de Glicemia',
       '',
-      'Conclusões sobre sintomas:', ...sintomasTexto,
+      '🔔 Alertas:',
+      ...alertas,
+      '',
+      'Conclusões sobre sintomas:',
+      ...sintomasTexto,
       '',
       '📋 Registros:',
       ...registros.map(r => {
@@ -292,10 +316,59 @@ const RelatorioCompleto = () => {
       }),
     ].join('\n');
 
+    const pasta = RNFS.TemporaryDirectoryPath;
+    let caminhoArquivo = '';
+    let mimeType = '';
+
     try {
-      await Share.share({ message: texto });
-    } catch (error) {
-      console.error('Erro ao compartilhar:', error);
+      if (formato.includes('JSON')) {
+      const conteudoJSON = {
+        alertas,
+        sintomas: sintomasTexto,
+        registros: registros.map(r => ({
+          valor: r.valor ?? null,
+          data: formatarData(r.timestamp),
+          sintomas: r.sintomas ?? []
+        })),
+        geradoEm: new Date().toISOString()
+      };
+
+      const jsonString = JSON.stringify(conteudoJSON, null, 2);
+      caminhoArquivo = `${pasta}/relatorio_glicemia.json`;
+      await RNFS.writeFile(caminhoArquivo, jsonString, 'utf8');
+      mimeType = 'application/json';
+
+      } else if (formato.includes('CSV')) {
+        // CSV com BOM UTF-8
+        const csvPath = `${pasta}/relatorio_glicemia.csv`;
+        const cabecalho = 'Data,Valor,Sintomas\n';
+        const linhas = registros.map(r => {
+          const data = formatarData(r.timestamp);
+          const sintomas = (r.sintomas || []).join('; ');
+          return `"${data}","${r.valor ?? ''}","${sintomas}"`;
+        });
+        await RNFS.writeFile(csvPath, '\uFEFF' + cabecalho + linhas.join('\n'), 'utf8');
+        caminhoArquivo = csvPath;
+        mimeType = 'text/csv';
+
+      } else if (formato.includes('TXT')) {
+        // TXT já funcionava
+        const txtPath = `${pasta}/relatorio_glicemia.txt`;
+        await RNFS.writeFile(txtPath, '\uFEFF' + conteudoTexto, 'utf8');
+        caminhoArquivo = txtPath;
+        mimeType = 'text/plain';
+      }
+
+      // Compartilhar
+      await Share.open({
+        title: 'Compartilhar Relatório',
+        url: `file://${caminhoArquivo}`,
+        type: mimeType,
+      });
+
+    } catch (erro) {
+      console.error('Erro ao compartilhar arquivo:', erro);
+      Alert.alert('Erro', 'Não foi possível gerar o arquivo.');
     }
   };
 

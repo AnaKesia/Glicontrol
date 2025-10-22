@@ -329,9 +329,39 @@ const HomeScreen = () => {
         )}
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.fab} onPress={() => navigation.navigate('InserirGlicemia')}>
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={() => navigation.navigate('InserirGlicemia')}
+      >
         <Icon name="add" size={30} color="#fff" />
       </TouchableOpacity>
+
+      <View style={styles.footer}>
+        <TouchableOpacity
+          style={styles.footerButton}
+          onPress={() => navigation.navigate('ListaRefeicoes')}
+        >
+          <Icon name="restaurant" size={24} color={'#ffffff'} />
+          <Text style={[styles.footerText, { color: '#ffffff' }]}>Refeições</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.footerButton}
+          onPress={() => navigation.navigate('ListaSintomas')}
+        >
+          <Icon name="healing" size={24} color={'#ffffff'} />
+          <Text style={[styles.footerText, { color: '#ffffff' }]}>Sintomas</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.footerButton}
+          onPress={() => navigation.navigate('TelaConfiguracoes')}
+        >
+          <Icon name="settings" size={24} color={'#ffffff'} />
+          <Text style={[styles.footerText, { color: '#ffffff' }]}>Configurações</Text>
+        </TouchableOpacity>
+      </View>
+
     </View>
   );
 };
