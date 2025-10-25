@@ -64,4 +64,10 @@ export const styles = StyleSheet.create({
     textDecorationLine: 'underline',
     color: '#fff',
   },
+  link: {
+    color: '#fff',
+    textAlign: 'center',
+    marginTop: 10,
+    textDecorationLine: 'underline',
+  },
 });

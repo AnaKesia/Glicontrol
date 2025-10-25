@@ -8,8 +8,6 @@ import { format } from 'date-fns';
 import { LineChart } from 'react-native-chart-kit';
 import { useConfiguracoes, tamanhosFonte } from './Configuracoes';
 import { criarEstilos } from '../estilos/relatorioCompleto';
-import RNHTMLtoPDF from 'react-native-html-to-pdf';
-import RNFS from 'react-native-fs';
 import { Alert } from 'react-native';
 import Share from 'react-native-share';
 

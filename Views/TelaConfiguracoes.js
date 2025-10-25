@@ -1,10 +1,33 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, Alert } from 'react-native';
 import { useConfiguracoes, temas, tamanhosFonte } from './Configuracoes';
 import { styles } from '../estilos/telaConfiguracoes';
+import { deletarContaEDados } from '../services/usuarioService';
 
 const TelaConfiguracoes = () => {
   const { config, atualizarConfig } = useConfiguracoes();
+  const [confirmarExclusao, setConfirmarExclusao] = useState(false);
+
+  const handleDeletarConta = async () => {
+    if (!confirmarExclusao) {
+      setConfirmarExclusao(true);
+      Alert.alert(
+        'Tem certeza?',
+        'Clicar novamente confirmará a exclusão da sua conta e todos os seus dados.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
+    try {
+      const mensagem = await deletarContaEDados();
+      Alert.alert('Conta excluída', mensagem);
+    } catch (error) {
+      Alert.alert('Erro', error.message);
+    } finally {
+      setConfirmarExclusao(false);
+    }
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: temas[config.tema].fundo }]}>
@@ -53,9 +76,32 @@ const TelaConfiguracoes = () => {
         ))}
       </View>
 
-      <Text style={[styles.preview, { color: temas[config.tema].texto, fontSize: tamanhosFonte[config.fonte] }]}>
+      <Text
+        style={[
+          styles.preview,
+          { color: temas[config.tema].texto, fontSize: tamanhosFonte[config.fonte] },
+        ]}
+      >
         Exemplo de texto no tamanho selecionado
       </Text>
+
+
+      <TouchableOpacity
+        onPress={handleDeletarConta}
+        style={[
+          styles.botao,
+          {
+            backgroundColor: confirmarExclusao ? '#aa0000' : '#cc0000',
+            marginTop: 40,
+            alignSelf: 'center',
+            paddingHorizontal: 20,
+          },
+        ]}
+      >
+        <Text style={{ color: '#fff', fontWeight: 'bold' }}>
+          {confirmarExclusao ? 'Clique novamente para confirmar' : 'Deletar conta'}
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 };

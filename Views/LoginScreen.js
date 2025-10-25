@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, TextInput, Button, TouchableOpacity, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../hooks/useAuth';
 import { styles } from '../estilos/login';
+import auth from '@react-native-firebase/auth';
 
 const LoginScreen = () => {
   const [email, setEmail] = useState('');
@@ -30,6 +31,21 @@ const LoginScreen = () => {
       console.log('Usuário logado:', user.email);
     } catch (error) {
       Alert.alert('Erro de login', error.message);
+    }
+  };
+
+  const handleEsqueciSenha = async () => {
+    if (!email) {
+      Alert.alert('Erro', 'Digite seu e-mail para redefinir a senha.');
+      return;
+    }
+
+    try {
+      await auth().sendPasswordResetEmail(email);
+      Alert.alert('Sucesso', 'E-mail de redefinição enviado! Verifique sua caixa de entrada.');
+    } catch (error) {
+      console.error(error);
+      Alert.alert('Erro', 'Não foi possível enviar o e-mail de redefinição. Verifique o formato do e-mail.');
     }
   };
 
@@ -71,6 +87,10 @@ const LoginScreen = () => {
           secureTextEntry
         />
       </View>
+
+      <TouchableOpacity onPress={handleEsqueciSenha}>
+        <Text style={styles.link}>Esqueci minha senha</Text>
+      </TouchableOpacity>
 
       <Button title="Entrar" onPress={handleLogin} />
 
