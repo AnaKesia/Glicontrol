@@ -64,5 +64,80 @@ export const criarEstilos = (tema, fontSize, config) => {
      color: '#28a745',
      marginTop: 4,
     },
+    titulo: {
+      fontSize: 22,
+      fontWeight: 'bold',
+      textAlign: 'center',
+      marginVertical: 10,
+      color: tema.texto,
+    },
+    filtrosContainer: {
+      paddingHorizontal: 10,
+      marginBottom: 10,
+    },
+    filtroOrdem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-around',
+      marginBottom: 10,
+    },
+    filtroLabel: {
+      fontSize: tema.fonte,
+      fontWeight: '600',
+      color: tema.texto,
+      marginBottom: 5,
+    },
+    botaoOrdem: {
+      paddingVertical: 6,
+      paddingHorizontal: 10,
+      borderRadius: 8,
+      backgroundColor: tema.card,
+    },
+    botaoOrdemAtivo: {
+      backgroundColor: tema.primaria,
+    },
+    botaoOrdemTexto: {
+      color: tema.texto,
+    },
+    tiposContainer: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: 'space-between',
+    },
+    botaoTipo: {
+      paddingVertical: 6,
+      paddingHorizontal: 10,
+      borderRadius: 8,
+      marginVertical: 4,
+      backgroundColor: tema.card,
+    },
+    botaoTipoAtivo: {
+      backgroundColor: tema.primaria,
+    },
+    botaoTipoTexto: {
+      color: tema.texto,
+    },
+    botaoTipoTextoAtivo: {
+      color: 'white',
+      fontWeight: 'bold',
+    },
+    dropdown: {
+      backgroundColor: config.tema === 'escuro' ? azulEscuro : 'white',
+      borderRadius: 8,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      marginBottom: 10,
+      borderWidth: 1,
+      borderColor: config.tema === 'escuro' ? '#ccc' : '#888',
+    },
+    dropdownText: {
+      color: config.tema === 'escuro' ? 'white' : 'black',
+    },
+    dropdownPlaceholder: {
+      color: config.tema === 'escuro' ? '#ccc' : '#666',
+    },
+    dropdownItemText: {
+      color: 'black',
+    },
  });
 };

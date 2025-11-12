@@ -1,9 +1,9 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { buscarMedicoesUsuario, deletarMedicao } from '../firebaseService';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { formatarData } from '../utils/dataUtils';
+import { buscarMedicoesUsuario, deletarMedicao } from '../firebaseService';
 import { useConfiguracoes, tamanhosFonte } from './Configuracoes';
 import { criarEstilos } from '../estilos/listaMedicoes';
 
@@ -17,8 +17,20 @@ const ListaMedicoes = () => {
   const styles = criarEstilos(tema, fonteBase);
 
   const carregarMedicoes = useCallback(async () => {
-    const dados = await buscarMedicoesUsuario();
-    setMedicoes(dados);
+    try {
+      const dados = await buscarMedicoesUsuario();
+
+      // Garantir que sintomas sempre seja array e intensidade só se tiver sintomas
+      const medicoesFormatadas = dados.map((m) => ({
+        ...m,
+        sintomas: Array.isArray(m.sintomas) ? m.sintomas : [],
+        intensidade: m.sintomas && m.sintomas.length > 0 ? m.intensidade || '' : '',
+      }));
+
+      setMedicoes(medicoesFormatadas);
+    } catch (error) {
+      console.log('Erro ao carregar medições:', error);
+    }
   }, []);
 
   const confirmarRemocao = (id) => {
@@ -65,12 +77,7 @@ const ListaMedicoes = () => {
 };
 
 const ItemMedicao = ({ item, onEditar, onExcluir, tema, fonteBase }) => {
-  const navigation = useNavigation();
   const styles = criarEstilos(tema, fonteBase);
-
-  const irParaSintomas = () => {
-    navigation.navigate('RegistrarSintoma', { glicemiaId: item.id });
-  };
 
   return (
     <View style={styles.item}>
@@ -80,9 +87,16 @@ const ItemMedicao = ({ item, onEditar, onExcluir, tema, fonteBase }) => {
       </Text>
       <Text style={styles.texto}>Data: {formatarData(item.timestamp)}</Text>
 
-      {item.observacao != null && item.observacao.toString().trim() !== '' && (
-        <Text style={styles.texto}>Observações: {item.observacao}</Text>
+      {item.sintomas.length > 0 && (
+        <>
+          <Text style={styles.texto}>Sintomas: {item.sintomas.join(', ')}</Text>
+          <Text style={styles.texto}>Intensidade: {item.intensidade}</Text>
+        </>
       )}
+
+      {item.observacao ? (
+        <Text style={styles.texto}>Observações: {item.observacao}</Text>
+      ) : null}
 
       <View style={styles.acoes}>
         <TouchableOpacity onPress={onEditar} style={styles.botaoEditar}>
@@ -90,9 +104,6 @@ const ItemMedicao = ({ item, onEditar, onExcluir, tema, fonteBase }) => {
         </TouchableOpacity>
         <TouchableOpacity onPress={onExcluir} style={styles.botaoExcluir}>
           <Icon name="delete" size={18} color="#fff" />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={irParaSintomas} style={styles.botaoSintoma}>
-          <Icon name="healing" size={18} color="#fff" />
         </TouchableOpacity>
       </View>
     </View>

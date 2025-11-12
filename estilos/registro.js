@@ -20,6 +20,7 @@ export const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 10,
     marginBottom: 5,
+    color: '#000',
   },
   erro: {
     color: '#ff4d4f',

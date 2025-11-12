@@ -31,6 +31,8 @@ export const buscarMedicoesUsuario = async () => {
         categoria: data.categoria,
         timestamp: data.timestamp,
         observacao: data.observacao || '',
+        sintomas: data.sintomas || [],
+        intensidade: data.intensidade || '',
       };
     })
     .filter(m => m.timestamp)
@@ -97,66 +99,9 @@ export const deletarRefeicao = async (id) => {
   return await firestore().collection('refeicoes').doc(id).delete();
 };
 
-export const registrarSintoma = async (sintomaData) => {
-  try {
-    await firestore().collection('sintomas').add(sintomaData);
-    return true;
-  } catch (err) {
-    console.error('Erro ao salvar sintoma:', err);
-    throw err;
-  }
-};
-
-export const buscarSintomasPorGlicemia = async (glicemiaId) => {
-  try {
-    const snapshot = await firestore()
-      .collection('sintomas')
-      .where('glicemiaId', '==', glicemiaId)
-      .get();
-
-    return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-  } catch (err) {
-    console.error('Erro ao buscar sintomas:', err);
-    throw err;
-  }
-};
-
-export const buscarSintomasPorUsuario = async () => {
-  const userId = auth().currentUser.uid;
-  const snapshot = await firestore()
-    .collection('sintomas')
-    .where('usuarioId', '==', userId)
-    .get();
-
-  return snapshot.docs.map((doc) => ({
-    id: doc.id,
-    ...doc.data(),
-  }));
-};
-
 export const buscarMedicaoPorId = async (id) => {
   const doc = await firestore().collection('medicoes').doc(id).get();
   return doc.exists ? doc.data() : null;
-};
-
-export const editarSintoma = async (id, dados) => {
-  try {
-    await firestore().collection('sintomas').doc(id).set(dados, { merge: true });
-    return true;
-  } catch (err) {
-    console.error('Erro ao editar sintoma:', err);
-    throw err;
-  }
-};
-
-export const deletarSintoma = async (id) => {
-  try {
-    await firestore().collection('sintomas').doc(id).delete();
-    return true;
-  } catch (err) {
-    console.error('Erro ao deletar sintoma:', err);
-    throw err;
-  }
 };
 
 export const registrarUsoMedicamento = async ({ medicamentoId, dose, tomado }) => {

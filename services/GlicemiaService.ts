@@ -2,7 +2,7 @@ import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
 
 export class GlicemiaService {
-  async salvarMedicao(dados: any, medicaoId?: string) {
+  async salvarMedicao(dados, medicaoId) {
     const usuario = auth().currentUser;
     if (!usuario) throw new Error('Usuário não autenticado');
 
@@ -16,10 +16,10 @@ export class GlicemiaService {
     try {
       if (medicaoId) {
         await medicoesRef.doc(medicaoId).set(dadosComUsuario, { merge: true });
-        return 'Medição atualizada!';
+        return medicaoId;
       } else {
-        await medicoesRef.add(dadosComUsuario);
-        return 'Medição registrada!';
+        const docRef = await medicoesRef.add(dadosComUsuario);
+        return docRef.id;
       }
     } catch (error) {
       console.error('Erro ao salvar medição:', error);

@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, Alert, Dimensions,
+  View, Text, StyleSheet, TouchableOpacity, Alert, Dimensions, ScrollView,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { LineChart } from 'react-native-chart-kit';
@@ -25,6 +25,7 @@ const HomeScreen = () => {
   const { config } = useConfiguracoes();
   const tema = temas[config.tema] || temas.escuro;
   const fonte = tamanhosFonte[config.fonte] || tamanhosFonte.media;
+  const styles = criarEstilos(tema, fonte);
 
   const carregarMedicoes = async () => {
     try {
@@ -51,11 +52,7 @@ const HomeScreen = () => {
         setGlicemias(valores);
 
         const alertas = analisarGlicemia(dados);
-        if (Array.isArray(alertas) && alertas.length > 0) {
-          setAlertaRecente(alertas[0]);
-        } else {
-          setAlertaRecente(null);
-        }
+        setAlertaRecente(Array.isArray(alertas) && alertas.length > 0 ? alertas[0] : null);
       } else {
         setLabels([]);
         setGlicemias([]);
@@ -83,39 +80,24 @@ const HomeScreen = () => {
       querySnapshot.forEach(doc => {
         const medicamento = doc.data();
 
-        if (Array.isArray(medicamento.Horarios)) {
-          medicamento.Horarios.forEach(horario => {
-            const [hora, minuto] = horario.split(':').map(Number);
-            const dataHorario = new Date();
-            dataHorario.setHours(hora, minuto, 0, 0);
+        const horarios = Array.isArray(medicamento.Horarios)
+          ? medicamento.Horarios
+          : medicamento.Horário
+          ? [medicamento.Horário]
+          : [];
 
-            if (dataHorario < agora) {
-              dataHorario.setDate(dataHorario.getDate() + 1);
-            }
-
-            const diferenca = dataHorario - agora;
-            if (diferenca < menorDiferenca) {
-              menorDiferenca = diferenca;
-              proximo = { ...medicamento, horarioProximo: horario };
-            }
-          });
-        }
-        // Caso tenha apenas um horário
-        else if (medicamento.Horário) {
-          const [hora, minuto] = medicamento.Horário.split(':').map(Number);
+        horarios.forEach(horario => {
+          const [hora, minuto] = horario.split(':').map(Number);
           const dataHorario = new Date();
           dataHorario.setHours(hora, minuto, 0, 0);
-
-          if (dataHorario < agora) {
-            dataHorario.setDate(dataHorario.getDate() + 1);
-          }
+          if (dataHorario < agora) dataHorario.setDate(dataHorario.getDate() + 1);
 
           const diferenca = dataHorario - agora;
           if (diferenca < menorDiferenca) {
             menorDiferenca = diferenca;
-            proximo = { ...medicamento, horarioProximo: medicamento.Horário };
+            proximo = { ...medicamento, horarioProximo: horario };
           }
-        }
+        });
       });
 
       setProximoMedicamento(proximo);
@@ -141,14 +123,17 @@ const HomeScreen = () => {
         const medicamento = doc.data();
         const agora = new Date();
 
-        if (medicamento.Horário) {
-          const [hora, minuto] = medicamento.Horário.split(':').map(Number);
+        const horarios = Array.isArray(medicamento.Horarios)
+          ? medicamento.Horarios
+          : medicamento.Horário
+          ? [medicamento.Horário]
+          : [];
+
+        for (const h of horarios) {
+          const [hora, minuto] = h.split(':').map(Number);
           let horarioNotificacao = new Date();
           horarioNotificacao.setHours(hora, minuto, 0, 0);
-
-          if (horarioNotificacao <= agora) {
-            horarioNotificacao.setDate(horarioNotificacao.getDate() + 1);
-          }
+          if (horarioNotificacao <= agora) horarioNotificacao.setDate(horarioNotificacao.getDate() + 1);
 
           await notifee.createTriggerNotification(
             {
@@ -162,42 +147,17 @@ const HomeScreen = () => {
               repeatFrequency: RepeatFrequency.DAILY,
             }
           );
+        }
 
-        } else if (Array.isArray(medicamento.Horarios)) {
-          for (const h of medicamento.Horarios) {
-            const [hora, minuto] = h.split(':').map(Number);
-            let horarioNotificacao = new Date();
-            horarioNotificacao.setHours(hora, minuto, 0, 0);
-
-            if (horarioNotificacao <= agora) {
-              horarioNotificacao.setDate(horarioNotificacao.getDate() + 1);
-            }
-
-            await notifee.createTriggerNotification(
-              {
-                title: 'Hora de tomar o medicamento',
-                body: `${medicamento.Nome} - ${medicamento.Dose}`,
-                android: { channelId: 'medicamentos' },
-              },
-              {
-                type: TriggerType.TIMESTAMP,
-                timestamp: horarioNotificacao.getTime(),
-                repeatFrequency: RepeatFrequency.DAILY,
-              }
-            );
-          }
-        } else if (medicamento.IntervaloHoras) {
-          const horas = medicamento.IntervaloHoras;
+        // Para intervalo em horas
+        if (medicamento.IntervaloHoras) {
           const base = new Date();
           base.setHours(0, 0, 0, 0);
-
+          const horas = medicamento.IntervaloHoras;
           for (let i = 0; i < 24; i += horas) {
             let horarioNotificacao = new Date(base);
             horarioNotificacao.setHours(i, 0, 0, 0);
-
-            if (horarioNotificacao <= agora) {
-              horarioNotificacao.setDate(horarioNotificacao.getDate() + 1);
-            }
+            if (horarioNotificacao <= agora) horarioNotificacao.setDate(horarioNotificacao.getDate() + 1);
 
             await notifee.createTriggerNotification(
               {
@@ -233,12 +193,8 @@ const HomeScreen = () => {
   const handleLogout = () => {
     auth()
       .signOut()
-      .then(() => {
-        navigation.replace('Login');
-      })
-      .catch(error => {
-        Alert.alert('Erro', 'Falha ao deslogar: ' + error.message);
-      });
+      .then(() => navigation.replace('Login'))
+      .catch(error => Alert.alert('Erro', 'Falha ao deslogar: ' + error.message));
   };
 
   const data = {
@@ -247,121 +203,95 @@ const HomeScreen = () => {
       {
         data: glicemias.length > 0 ? glicemias : [0],
         strokeWidth: 2,
-        color: (opacity = 1) => tema.botaoFundo, // Linha no gráfico com cor do tema
+        color: (opacity = 1) => tema.botaoFundo,
       },
     ],
   };
 
-  const styles = criarEstilos(tema, fonte);
-
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Últimas Medições de Glicemia</Text>
+      <ScrollView contentContainerStyle={{ paddingBottom: 120, paddingHorizontal: 15 }}>
+        <Text style={styles.title}>Últimas Medições de Glicemia</Text>
 
-      <TouchableOpacity onPress={() => navigation.navigate('ListaMedicoes')}>
-        <LineChart
-          data={data}
-          width={screenWidth - 30}
-          height={220}
-          chartConfig={{
-            backgroundColor: tema.botaoFundo,
-            backgroundGradientFrom: tema.botaoFundo,
-            backgroundGradientTo: tema.fundo,
-            decimalPlaces: 0,
-            color: (opacity = 1) => tema.texto,
-            labelColor: () => tema.texto,
-            propsForDots: {
-              r: '4',
-              strokeWidth: '2',
-              stroke: tema.texto,
-            },
-            propsForBackgroundLines: {
-              stroke: tema.texto + '33',
-            },
-          }}
-          bezier
-          style={styles.chart}
-        />
-      </TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.navigate('ListaMedicoes')}>
+          <LineChart
+            data={data}
+            width={screenWidth - 30}
+            height={220}
+            chartConfig={{
+              backgroundColor: tema.botaoFundo,
+              backgroundGradientFrom: tema.botaoFundo,
+              backgroundGradientTo: tema.fundo,
+              decimalPlaces: 0,
+              color: (opacity = 1) => tema.texto,
+              labelColor: () => tema.texto,
+              propsForDots: { r: '4', strokeWidth: '2', stroke: tema.texto },
+              propsForBackgroundLines: { stroke: tema.texto + '33' },
+            }}
+            bezier
+            style={styles.chart}
+          />
+        </TouchableOpacity>
 
-      <TouchableOpacity
-        style={[
-          styles.alertaContainer,
-          { backgroundColor: alertaRecente?.startsWith('⚠️') ? '#ffc107' : tema.botaoFundo },
-        ]}
-        onPress={() => navigation.navigate('Relatorios')}
-      >
-        <Text
+        <TouchableOpacity
           style={[
-            styles.alertaTitulo,
-            { color: alertaRecente?.startsWith('⚠️') ? '#000' : tema.botaoTexto },
+            styles.alertaContainer,
+            { backgroundColor: alertaRecente?.startsWith('⚠️') ? '#ffc107' : tema.botaoFundo },
           ]}
+          onPress={() => navigation.navigate('Relatorios')}
         >
-          {alertaRecente?.startsWith('⚠️') ? '⚠️ Alerta Recente' : '✅ Sem alertas recentes'}
-        </Text>
-        <Text
-          style={[
-            styles.alertaTexto,
-            { color: alertaRecente?.startsWith('⚠️') ? '#000' : tema.botaoTexto },
-          ]}
-        >
-          {alertaRecente || 'Tudo sob controle nos últimos dias.'}
-        </Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={styles.medicamentoContainer}
-        onPress={() => navigation.navigate('Medicamentos')}
-      >
-        <Text style={styles.medicamentoTitulo}>💊 Próximo Medicamento</Text>
-        {proximoMedicamento ? (
-          <>
-            <Text style={styles.medicamentoNome}>{proximoMedicamento.Nome}</Text>
-            <Text style={styles.medicamentoDetalhe}>Dose: {proximoMedicamento.Dose}</Text>
-            <Text style={styles.medicamentoDetalhe}>
-              Horário: {proximoMedicamento.horarioProximo}
-            </Text>
-          </>
-        ) : (
-          <Text style={styles.medicamentoDetalhe}>
-            Nenhum medicamento agendado.
+          <Text
+            style={[
+              styles.alertaTitulo,
+              { color: alertaRecente?.startsWith('⚠️') ? '#000' : tema.botaoTexto },
+            ]}
+          >
+            {alertaRecente?.startsWith('⚠️') ? '⚠️ Alerta Recente' : '✅ Sem alertas recentes'}
           </Text>
-        )}
-      </TouchableOpacity>
+          <Text
+            style={[
+              styles.alertaTexto,
+              { color: alertaRecente?.startsWith('⚠️') ? '#000' : tema.botaoTexto },
+            ]}
+          >
+            {alertaRecente || 'Tudo sob controle nos últimos dias.'}
+          </Text>
+        </TouchableOpacity>
 
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => navigation.navigate('InserirGlicemia')}
-      >
+        <TouchableOpacity style={styles.medicamentoContainer} onPress={() => navigation.navigate('Medicamentos')}>
+          <Text style={styles.medicamentoTitulo}>💊 Próximo Medicamento</Text>
+          {proximoMedicamento ? (
+            <>
+              <Text style={styles.medicamentoNome}>{proximoMedicamento.Nome}</Text>
+              <Text style={styles.medicamentoDetalhe}>Dose: {proximoMedicamento.Dose}</Text>
+              <Text style={styles.medicamentoDetalhe}>Horário: {proximoMedicamento.horarioProximo}</Text>
+            </>
+          ) : (
+            <Text style={styles.medicamentoDetalhe}>Nenhum medicamento agendado.</Text>
+          )}
+        </TouchableOpacity>
+      </ScrollView>
+
+      <TouchableOpacity style={styles.fab} onPress={() => navigation.navigate('InserirGlicemia')}>
         <Icon name="add" size={30} color="#fff" />
       </TouchableOpacity>
 
       <View style={styles.footer}>
-        <TouchableOpacity
-          style={styles.footerButton}
-          onPress={() => navigation.navigate('ListaRefeicoes')}
-        >
+        <TouchableOpacity style={styles.footerButton} onPress={() => navigation.navigate('ListaRefeicoes')}>
           <Icon name="restaurant" size={24} color={'#ffffff'} />
           <Text style={[styles.footerText, { color: '#ffffff' }]}>Refeições</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.footerButton}
-          onPress={() => navigation.navigate('ListaSintomas')}
-        >
+        <TouchableOpacity style={styles.footerButton} onPress={() => navigation.navigate('RelatorioCompleto')}>
           <Icon name="healing" size={24} color={'#ffffff'} />
-          <Text style={[styles.footerText, { color: '#ffffff' }]}>Sintomas</Text>
+          <Text style={[styles.footerText, { color: '#ffffff' }]}>Relatório</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.footerButton}
-          onPress={() => navigation.navigate('TelaConfiguracoes')}
-        >
+        <TouchableOpacity style={styles.footerButton} onPress={() => navigation.navigate('TelaConfiguracoes')}>
           <Icon name="settings" size={24} color={'#ffffff'} />
           <Text style={[styles.footerText, { color: '#ffffff' }]}>Configurações</Text>
         </TouchableOpacity>
       </View>
-
     </View>
   );
 };

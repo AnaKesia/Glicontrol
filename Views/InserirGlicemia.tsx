@@ -1,11 +1,19 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, Alert } from 'react-native';
+import {
+  View, Text, TextInput, Button, Alert, ScrollView, TouchableOpacity
+} from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { useNavigation, useRoute } from '@react-navigation/native';
+
 import { useGlicemia } from '../hooks/usoGlicemia';
 import { useConfiguracoes, tamanhosFonte } from './Configuracoes';
 import { TimePicker } from '../hooks/TimePicker';
 import { criarEstilos } from '../estilos/inserirGlicemia';
+
+const sintomasListados = [
+  'Tontura', 'Visão turva', 'Dor de cabeça', 'Suor excessivo',
+  'Fome repentina', 'Palpitação', 'Formigamento', 'Outro',
+];
 
 const InserirGlicemia = () => {
   const navigation = useNavigation();
@@ -15,61 +23,152 @@ const InserirGlicemia = () => {
   const { config, temas } = useConfiguracoes();
   const tema = temas[config.tema];
   const fonte = tamanhosFonte[config.fonte];
+  const styles = criarEstilos(tema, fonte);
 
   const [mostrarTimePicker, setMostrarTimePicker] = useState(false);
 
-  const { valor, setValor, categoria, setCategoria, dataHora, setDataHora, observacao, setObservacao, salvar } = useGlicemia(medicao);
+  const {
+    valor, setValor,
+    categoria, setCategoria,
+    dataHora, setDataHora,
+    observacao, setObservacao,
+    sintomas, setSintomas,
+    intensidade, setIntensidade,
+    salvar
+  } = useGlicemia(medicao);
+
+  const toggleSintoma = (sintoma) => {
+    setSintomas(prev =>
+      prev.includes(sintoma) ? prev.filter(s => s !== sintoma) : [...prev, sintoma]
+    );
+  };
 
   const handleSalvar = async () => {
     try {
-      const mensagem = await salvar();
-      Alert.alert('Sucesso', mensagem, [{ text: 'OK', onPress: () => navigation.goBack() }]);
-    } catch (erro) {
-      Alert.alert('Erro', erro.message || 'Não foi possível salvar a medição.');
+      await salvar();
+      Alert.alert('Sucesso', 'Dados salvos com sucesso!');
+      navigation.goBack();
+    } catch (error) {
+      console.error('Erro ao salvar dados:', error);
+      Alert.alert('Erro', error.message || 'Falha ao salvar os dados.');
     }
   };
 
-  const styles = criarEstilos(tema, fonte);
-
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>{medicao ? 'Editar Medição' : 'Nova Medição'}</Text>
+    <ScrollView
+      contentContainerStyle={styles.scrollContainer}
+      keyboardShouldPersistTaps="handled"
+    >
+      <View style={styles.innerContainer}>
+        <Text style={styles.title}>
+          {medicao ? 'Editar Medição' : 'Nova Medição'}
+        </Text>
 
-      <TextInput
-        style={styles.input}
-        placeholder="Valor da glicemia (mg/dL)"
-        placeholderTextColor={tema.placeholder}
-        keyboardType="numeric"
-        value={valor}
-        onChangeText={t => setValor(t.replace(/[^0-9.,]/g, ''))}
-      />
+        <TextInput
+          style={styles.input}
+          placeholder="Insira medição"
+          placeholderTextColor="#b0b0b0"
+          keyboardType="numeric"
+          value={valor}
+          onChangeText={t => setValor(t.replace(/[^0-9.,]/g, ''))}
+        />
 
-      <Picker selectedValue={categoria} style={styles.input} onValueChange={setCategoria} dropdownIconColor={tema.texto}>
-        <Picker.Item label="Jejum" value="jejum" />
-        <Picker.Item label="Pós-Café" value="pos-cafe" />
-        <Picker.Item label="Pós-Almoço" value="pos-almoco" />
-        <Picker.Item label="Pós-Janta" value="pos-janta" />
-        <Picker.Item label="Antes de Dormir" value="antes-dormir" />
-        <Picker.Item label="Outro" value="outro" />
-      </Picker>
+        <Picker
+          selectedValue={categoria}
+          style={styles.input}
+          onValueChange={setCategoria}
+          dropdownIconColor={tema.texto}
+        >
+          <Picker.Item label="Jejum" value="jejum" />
+          <Picker.Item label="Pós-Café" value="pos-cafe" />
+          <Picker.Item label="Pós-Almoço" value="pos-almoco" />
+          <Picker.Item label="Pós-Janta" value="pos-janta" />
+          <Picker.Item label="Antes de Dormir" value="antes-dormir" />
+          <Picker.Item label="Outro" value="outro" />
+        </Picker>
 
-      <Button title="Selecionar Horário" onPress={() => setMostrarTimePicker(true)} />
-      <Text style={styles.horaSelecionada}>{dataHora.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
-      <TimePicker dataHora={dataHora} setDataHora={setDataHora} mostrar={mostrarTimePicker} setMostrar={setMostrarTimePicker} />
+        <Button title="Selecionar Horário" onPress={() => setMostrarTimePicker(true)} />
+        <Text style={styles.horaSelecionada}>
+          {dataHora.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+        </Text>
 
-      <TextInput
-        style={[styles.input, { height: 80 }]}
-        placeholder="Observações (opcional)"
-        placeholderTextColor={tema.placeholder}
-        multiline
-        value={observacao}
-        onChangeText={setObservacao}
-        autoCapitalize="sentences"
-        autoCorrect
-      />
+        <TimePicker
+          dataHora={dataHora}
+          setDataHora={setDataHora}
+          mostrar={mostrarTimePicker}
+          setMostrar={setMostrarTimePicker}
+        />
 
-      <Button title={medicao ? 'Salvar Alterações' : 'Salvar Medição'} onPress={handleSalvar} color={tema.botaoFundo} />
-    </View>
+        <Text style={[styles.title, { marginTop: 30 }]}>Sintomas (opcional)</Text>
+
+        <View style={styles.sintomasContainer}>
+          {sintomasListados.map(item => {
+            const selecionado = sintomas.includes(item);
+            return (
+              <TouchableOpacity
+                key={item}
+                onPress={() => toggleSintoma(item)}
+                style={[
+                  styles.sintomaButton,
+                  { backgroundColor: selecionado ? tema.botaoFundo : tema.fundoBotaoSecundario },
+                ]}
+              >
+                <Text style={{
+                  color: selecionado ? tema.botaoTexto : tema.texto,
+                  fontSize: fonte
+                }}>
+                  {item}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {sintomas.length > 0 && (
+          <>
+            <Text style={styles.label}>Intensidade:</Text>
+            <View style={styles.buttonGroup}>
+              {['leve', 'moderada', 'forte'].map(nivel => (
+                <TouchableOpacity
+                  key={nivel}
+                  style={[
+                    styles.intensidadeButton,
+                    { backgroundColor: intensidade === nivel ? tema.botaoFundo : tema.fundoBotaoSecundario },
+                  ]}
+                  onPress={() => setIntensidade(nivel)}
+                >
+                  <Text style={{
+                    color: intensidade === nivel ? tema.botaoTexto : tema.texto,
+                    fontWeight: 'bold',
+                    fontSize: fonte
+                  }}>
+                    {nivel}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </>
+        )}
+
+        <Text style={[styles.label, { marginTop: 20 }]}>Observações (opcional):</Text>
+        <TextInput
+          style={[styles.input, { height: 80 }]}
+          placeholder="Digite uma observação sobre a medição ou sintomas"
+          value={observacao}
+          onChangeText={t => setObservacao(t.trimStart())}
+          multiline
+          placeholderTextColor="#999"
+        />
+
+        <View style={{ marginTop: 30 }}>
+          <Button
+            title={medicao ? 'Salvar Alterações' : 'Salvar Medição'}
+            onPress={handleSalvar}
+            color={tema.botaoFundo}
+          />
+        </View>
+      </View>
+    </ScrollView>
   );
 };
 

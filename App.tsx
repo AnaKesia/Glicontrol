@@ -14,8 +14,6 @@ import ListaRemedios from './Views/ListaRemedios';
 import ListaRefeicoes from './Views/ListaRefeicoes';
 import InserirRefeicao from './Views/InserirRefeicao';
 import DrawerNavigator from './Views/DrawerNavigator';
-import RegistrarSintoma from './Views/RegistrarSintoma';
-import ListaSintomas from './Views/ListaSintomas';
 import ConfirmarUsoMedicamento from './Views/ConfirmarUsoMedicamento';
 import ListaUsoMedicamento from './Views/ListaUsoMedicamento';
 import Relatorios from './Views/Relatorios';
@@ -64,8 +62,6 @@ export default function App() {
               <Stack.Screen name="ListaMedicoes" component={ListaMedicoes} />
               <Stack.Screen name="ListaRefeicoes" component={ListaRefeicoes} />
               <Stack.Screen name="InserirRefeicao" component={InserirRefeicao} />
-              <Stack.Screen name="RegistrarSintoma" component={RegistrarSintoma} />
-              <Stack.Screen name="ListaSintomas" component={ListaSintomas} />
               <Stack.Screen name="ListaRemedios" component={ListaRemedios} />
               <Stack.Screen name="ConfirmarUsoMedicamento" component={ConfirmarUsoMedicamento} />
               <Stack.Screen name="ListaUsoMedicamento" component={ListaUsoMedicamento} />
