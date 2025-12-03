@@ -83,3 +83,4 @@ android/app/my-release-key.jks
 my-release-key.jks
 services/analiseImagemIA.js
 GliControl/services/analiseImagemIA.js
+/android

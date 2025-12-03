@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { auth } from '../firebaseConfig';
+import firestore from '@react-native-firebase/firestore';
 
 export const useRegister = () => {
   const [erros, setErros] = useState({});
@@ -20,8 +21,22 @@ export const useRegister = () => {
     }
 
     try {
+      // 1) Registrar no Auth
       const cred = await auth().createUserWithEmailAndPassword(email, senha);
+
+      // 2) Salvar displayName no Auth (opcional)
       await cred.user.updateProfile({ displayName: nome });
+
+      // 3) 🔹 SALVAR NO FIRESTORE
+      await firestore()
+        .collection('usuarios')
+        .doc(cred.user.uid)
+        .set({
+          nome: nome,
+          email: email,
+          criadoEm: firestore.FieldValue.serverTimestamp(),
+        });
+
       return { user: cred.user };
     } catch (error) {
       if (error.code === 'auth/email-already-in-use') {

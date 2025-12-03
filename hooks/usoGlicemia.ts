@@ -9,6 +9,7 @@ export const useGlicemia = (medicao) => {
   const [observacao, setObservacao] = useState('');
   const [sintomas, setSintomas] = useState([]);
   const [intensidade, setIntensidade] = useState('moderada');
+  const [peso, setPeso] = useState(''); // novo estado
 
   const glicemiaService = new GlicemiaService();
 
@@ -22,11 +23,15 @@ export const useGlicemia = (medicao) => {
       setObservacao(medicao.observacao || '');
       setSintomas(medicao.sintomas || []);
       setIntensidade(medicao.intensidade || 'moderada');
+      setPeso(medicao.peso ? String(medicao.peso) : '');
     }
   }, [medicao]);
 
-  const salvar = async () => {
+  const salvar = async (dadosExtras = {}) => {
     const valorNumerico = Number(valor.replace(',', '.'));
+    const pesoNumerico = dadosExtras.peso
+      ? Number(dadosExtras.peso.replace(',', '.'))
+      : null;
 
     if (!valor || isNaN(valorNumerico) || valorNumerico <= 0) {
       throw new Error('Insira um valor numérico válido maior que zero.');
@@ -42,6 +47,7 @@ export const useGlicemia = (medicao) => {
       observacao: observacao.trim(),
       sintomas,
       intensidade: sintomas.length > 0 ? intensidade : '',
+      peso: pesoNumerico || null, // salva peso se informado
     };
 
     const idMedicao = await glicemiaService.salvarMedicao(dados, medicao?.id);
@@ -54,6 +60,8 @@ export const useGlicemia = (medicao) => {
     dataHora, setDataHora,
     observacao, setObservacao,
     sintomas, setSintomas,
-    intensidade, setIntensidade, salvar,
+    intensidade, setIntensidade,
+    peso, setPeso,
+    salvar,
   };
 };

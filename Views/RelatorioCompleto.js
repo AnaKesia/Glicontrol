@@ -1,257 +1,31 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, ActivityIndicator,
-  TouchableOpacity, Dimensions, ScrollView } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Dimensions } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
-import firestore from '@react-native-firebase/firestore';
-import auth from '@react-native-firebase/auth';
-import { format } from 'date-fns';
-import { LineChart } from 'react-native-chart-kit';
-import { useConfiguracoes, tamanhosFonte } from './Configuracoes';
+import { useConfiguracoes } from './Configuracoes';
 import { criarEstilos } from '../estilos/relatorioCompleto';
-import { Alert } from 'react-native';
-import Share from 'react-native-share';
-
-function formatarData(timestamp) {
-  try {
-    const data = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-    return format(data, 'dd/MM/yyyy HH:mm');
-  } catch {
-    return String(timestamp);
-  }
-}
-
-async function prepararRegistrosParaAnalise(userId, intervalo = null) {
-
-  let queryMedicoes = firestore().collection('medicoes').where('usuarioId', '==', userId);
-  if (intervalo && intervalo.inicio) queryMedicoes = queryMedicoes.where('timestamp', '>=', intervalo.inicio);
-  if (intervalo && intervalo.fim) queryMedicoes = queryMedicoes.where('timestamp', '<', intervalo.fim);
-  const medicoesSnap = await queryMedicoes.orderBy('timestamp', 'asc').get();
-  const medicoes = medicoesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-  let querySintomas = firestore().collection('sintomas').where('usuarioId', '==', userId);
-  if (intervalo && intervalo.inicio) querySintomas = querySintomas.where('timestamp', '>=', intervalo.inicio);
-  if (intervalo && intervalo.fim) querySintomas = querySintomas.where('timestamp', '<', intervalo.fim);
-  const sintomasSnap = await querySintomas.orderBy('timestamp', 'asc').get();
-  const sintomas = sintomasSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-  const mapSintomasPorGlicemia = {};
-  sintomas.forEach(s => {
-    const sintomasArray = Array.isArray(s.sintoma) ? s.sintoma : [];
-    if (!mapSintomasPorGlicemia[s.glicemiaId]) {
-      mapSintomasPorGlicemia[s.glicemiaId] = [];
-    }
-    mapSintomasPorGlicemia[s.glicemiaId].push(...sintomasArray);
-  });
-
-  const registros = medicoes.map(m => ({
-    id: m.id,
-    valor: m.valor ?? null,
-    timestamp: m.timestamp,
-    sintomas: mapSintomasPorGlicemia[m.id] ?? [],
-  }));
-
-  return registros;
-}
-
-function analisarGlicemia(registros, intervalo = null) {
-  if (!Array.isArray(registros) || registros.length === 0) {
-    return ['Nenhum registro de glicemia para analisar.'];
-  }
-
-  registros.sort((a, b) => {
-    const dataA = a.timestamp.toDate ? a.timestamp.toDate() : new Date(a.timestamp);
-    const dataB = b.timestamp.toDate ? b.timestamp.toDate() : new Date(b.timestamp);
-    return dataA - dataB;
-  });
-
-  const alertas = [];
-  const agora = new Date();
-
-  let registrosFiltrados = registros;
-  if (intervalo && intervalo.inicio && intervalo.fim) {
-    registrosFiltrados = registros.filter(r => {
-      const data = r.timestamp.toDate ? r.timestamp.toDate() : new Date(r.timestamp);
-      return data >= intervalo.inicio && data < intervalo.fim;
-    });
-  } else if (intervalo && intervalo.inicio && !intervalo.fim) {
-    registrosFiltrados = registros.filter(r => {
-      const data = r.timestamp.toDate ? r.timestamp.toDate() : new Date(r.timestamp);
-      return data >= intervalo.inicio;
-    });
-  } else if (intervalo && !intervalo.inicio && intervalo.fim) {
-    registrosFiltrados = registros.filter(r => {
-      const data = r.timestamp.toDate ? r.timestamp.toDate() : new Date(r.timestamp);
-      return data < intervalo.fim;
-    });
-  }
-
-  if (registrosFiltrados.length === 0) {
-    return ['Nenhum registro no intervalo selecionado para analisar.'];
-  }
-
-  const matinais = registrosFiltrados.filter(r => {
-    const data = r.timestamp.toDate ? r.timestamp.toDate() : new Date(r.timestamp);
-    const hora = data.getHours();
-    return hora >= 6 && hora <= 9 && Number(r.valor) < 70;
-  });
-  if (matinais.length >= 3) {
-    alertas.push('⚠️ Possível hipoglicemia recorrente pela manhã (valores abaixo de 70 mg/dL entre 6h e 9h).');
-  }
-
-  // Variação brusca em até 2 horas (>= 50 mg/dL diferença)
-  for (let i = 1; i < registrosFiltrados.length; i++) {
-    const atual = registrosFiltrados[i];
-    const anterior = registrosFiltrados[i - 1];
-
-    const valorAtual = Number(atual.valor);
-    const valorAnterior = Number(anterior.valor);
-
-    const dataAtual = atual.timestamp.toDate ? atual.timestamp.toDate() : new Date(atual.timestamp);
-    const dataAnterior = anterior.timestamp.toDate ? anterior.timestamp.toDate() : new Date(anterior.timestamp);
-
-    const diffMinutos = Math.abs(dataAtual - dataAnterior) / 60000;
-
-    if (!isNaN(valorAtual) && !isNaN(valorAnterior) && Math.abs(valorAtual - valorAnterior) >= 50 && diffMinutos <= 120) {
-      alertas.push(`⚠️ Variação brusca detectada entre ${formatarData(anterior.timestamp)} e ${formatarData(atual.timestamp)}.`);
-    }
-  }
-
-  for (let i = 2; i < registrosFiltrados.length; i++) {
-    const v1 = Number(registrosFiltrados[i - 2].valor);
-    const v2 = Number(registrosFiltrados[i - 1].valor);
-    const v3 = Number(registrosFiltrados[i].valor);
-    if (!isNaN(v1) && !isNaN(v2) && !isNaN(v3)) {
-      if (v1 > v2 && v2 > v3) {
-        alertas.push(`⚠️ Queda progressiva detectada entre ${formatarData(registrosFiltrados[i - 2].timestamp)}, ${formatarData(registrosFiltrados[i - 1].timestamp)} e ${formatarData(registrosFiltrados[i].timestamp)}.`);
-        break;
-      }
-    }
-  }
-
-  // Muitas medições em 1 hora (mais de 5)
-  for (let i = 0; i < registrosFiltrados.length; i++) {
-    const inicio = registrosFiltrados[i].timestamp.toDate ? registrosFiltrados[i].timestamp.toDate() : new Date(registrosFiltrados[i].timestamp);
-    let contagem = 1;
-    for (let j = i + 1; j < registrosFiltrados.length; j++) {
-      const atual = registrosFiltrados[j].timestamp.toDate ? registrosFiltrados[j].timestamp.toDate() : new Date(registrosFiltrados[j].timestamp);
-      const diffMin = (atual - inicio) / 60000;
-      if (diffMin <= 60) contagem++;
-      else break;
-    }
-    if (contagem > 5) {
-      alertas.push('⚠️ Muitas medições em curto intervalo (mais de 5 medições em 1 hora).');
-      break;
-    }
-  }
-
-  registrosFiltrados.forEach(r => {
-    const val = Number(r.valor);
-    if (!isNaN(val)) {
-      if (val > 400) {
-        alertas.push(`⚠️ Valor extremamente alto detectado: ${val} mg/dL em ${formatarData(r.timestamp)}.`);
-      } else if (val < 40) {
-        alertas.push(`⚠️ Valor extremamente baixo detectado: ${val} mg/dL em ${formatarData(r.timestamp)}.`);
-      }
-    }
-  });
-
-  return alertas.length > 0 ? alertas : ['Nenhum alerta significativo encontrado no período selecionado.'];
-}
-
-function associarSintomas(registros, intervalo = null) {
-  if (!Array.isArray(registros) || registros.length === 0) {
-    return ['Nenhum registro de glicemia com sintomas para analisar.'];
-  }
-
-  let registrosFiltrados = registros;
-  if (intervalo && intervalo.inicio && intervalo.fim) {
-    registrosFiltrados = registros.filter(r => {
-      const data = r.timestamp.toDate ? r.timestamp.toDate() : new Date(r.timestamp);
-      return data >= intervalo.inicio && data < intervalo.fim;
-    });
-  } else if (intervalo && intervalo.inicio && !intervalo.fim) {
-    registrosFiltrados = registros.filter(r => {
-      const data = r.timestamp.toDate ? r.timestamp.toDate() : new Date(r.timestamp);
-      return data >= intervalo.inicio;
-    });
-  } else if (intervalo && !intervalo.inicio && intervalo.fim) {
-    registrosFiltrados = registros.filter(r => {
-      const data = r.timestamp.toDate ? r.timestamp.toDate() : new Date(r.timestamp);
-      return data < intervalo.fim;
-    });
-  }
-
-  if (registrosFiltrados.length === 0) {
-    return ['Nenhum registro com sintomas no período selecionado.'];
-  }
-
-  const sintomasPorTipo = {};
-
-  registrosFiltrados.forEach(r => {
-    if (Array.isArray(r.sintomas)) {
-      r.sintomas.forEach(s => {
-        if (!sintomasPorTipo[s]) sintomasPorTipo[s] = [];
-        sintomasPorTipo[s].push(Number(r.valor));
-      });
-    }
-  });
-
-  const analises = [];
-
-  for (const sintoma in sintomasPorTipo) {
-    const valores = sintomasPorTipo[sintoma].filter(v => !isNaN(v));
-    if (valores.length > 0) {
-      const media = valores.reduce((a, b) => a + b, 0) / valores.length;
-
-      let avaliacao = 'normal';
-      if (media < 70) {
-        avaliacao = 'baixos';
-      } else if (media > 180) {
-        avaliacao = 'altos';
-      }
-
-      analises.push(`🔍 Sintoma "${sintoma}" esteve associado a valores ${avaliacao} de glicemia (média de ${media.toFixed(1)} mg/dL no período).`);
-    }
-  }
-
-  return analises.length > 0 ? analises : ['Nenhuma associação significativa entre sintomas e glicemia no período selecionado.'];
-}
-
-function calcularIntervaloPorFiltro(filtro, mesSelecionado, anoSelecionado) {
-  const agora = new Date();
-
-  switch (filtro) {
-    case 'ultimos7':
-      return { inicio: new Date(agora.getTime() - 7 * 24 * 60 * 60 * 1000), fim: agora };
-    case 'ultimos30':
-      return { inicio: new Date(agora.getTime() - 30 * 24 * 60 * 60 * 1000), fim: agora };
-    case 'todos':
-      return null;
-    case 'mesAno':
-      if (!mesSelecionado || !anoSelecionado) return null;
-      const inicioMes = new Date(anoSelecionado, mesSelecionado - 1, 1, 0, 0, 0);
-      const fimMes = mesSelecionado === 12
-        ? new Date(anoSelecionado + 1, 0, 1, 0, 0, 0)
-        : new Date(anoSelecionado, mesSelecionado, 1, 0, 0, 0);
-      return { inicio: inicioMes, fim: fimMes };
-    case 'ano':
-      if (!anoSelecionado) return null;
-      const inicioAno = new Date(anoSelecionado, 0, 1, 0, 0, 0);
-      const fimAno = new Date(anoSelecionado + 1, 0, 1, 0, 0, 0);
-      return { inicio: inicioAno, fim: fimAno };
-    default:
-      return null;
-  }
-}
+import auth from '@react-native-firebase/auth';
+import { associarSintomas } from '../services/sintomasService';
+import { analisarGlicemia } from '../services/analiseService';
+import { prepararRegistrosParaAnalise } from '../services/registroService';
+import { calcularIntervaloPorFiltro } from '../utils/intervalo';
+import { compartilharRelatorio } from '../services/compartilhamentoService';
+import { formatarData } from '../utils/formatarData';
+import { LineChart } from 'react-native-chart-kit';
+import { buscaRegistrosPressao } from '../services/buscaPressao';
+import { prepararRegistrosDePressao, analisarPressao } from '../services/analisePressao';
+import { buscarHistoricoPeso, analisarPeso } from '../services/analisePeso';
 
 const RelatorioCompleto = () => {
   const [carregando, setCarregando] = useState(true);
   const [registros, setRegistros] = useState([]);
+  const [registrosPressao, setRegistrosPressao] = useState([]);
   const [alertas, setAlertas] = useState([]);
   const [sintomasTexto, setSintomasTexto] = useState([]);
   const [filtro, setFiltro] = useState('ultimos7');
   const [mesSelecionado, setMesSelecionado] = useState(new Date().getMonth() + 1);
   const [anoSelecionado, setAnoSelecionado] = useState(new Date().getFullYear());
+  const [registrosPeso, setRegistrosPeso] = useState([]);
+  const [avaliacaoPeso, setAvaliacaoPeso] = useState('');
 
   const { config, temas, tamanhosFonte } = useConfiguracoes();
   const temaAtual = temas[config.tema];
@@ -263,123 +37,45 @@ const RelatorioCompleto = () => {
       setCarregando(true);
       const userId = auth().currentUser?.uid;
       if (!userId) return;
+
       try {
         const intervalo = calcularIntervaloPorFiltro(filtro, mesSelecionado, anoSelecionado);
+
         const registrosPreparados = await prepararRegistrosParaAnalise(userId, intervalo);
         setRegistros(registrosPreparados);
-        setAlertas(analisarGlicemia(registrosPreparados, intervalo));
-        setSintomasTexto(associarSintomas(registrosPreparados, intervalo));
+        const alertasGlicemia = analisarGlicemia(registrosPreparados, intervalo);
+        const sintomas = associarSintomas(registrosPreparados, intervalo);
+        setSintomasTexto(sintomas);
+
+        const registrosPressaoPreparados = await buscaRegistrosPressao(userId, intervalo);
+        setRegistrosPressao(registrosPressaoPreparados);
+        const alertasPressao = analisarPressao(registrosPressaoPreparados, intervalo);
+
+        const historico = await buscarHistoricoPeso(userId);
+        const resultadoPeso = analisarPeso(historico, intervalo);
+
+        setRegistrosPeso(resultadoPeso.lista);
+        setAvaliacaoPeso(resultadoPeso.avaliacao);
+
+        setAlertas([...alertasGlicemia, ...alertasPressao]);
+
       } catch (e) {
         console.error('Erro ao carregar relatório:', e);
       } finally {
         setCarregando(false);
       }
     };
+
     carregarDados();
   }, [filtro, mesSelecionado, anoSelecionado]);
 
-  const compartilharRelatorio = async () => {
-    try {
-      const opcoes = ['📘 JSON', '🧾 CSV', '📝 TXT', 'Cancelar'];
-      Alert.alert(
-        'Compartilhar relatório',
-        'Escolha o formato de compartilhamento:',
-        opcoes.slice(0, 3).map((opcao, i) => ({
-          text: opcao,
-          onPress: () => compartilharComo(opcoes[i]),
-        })),
-        { cancelable: true }
-      );
-    } catch (error) {
-      console.error('Erro ao exibir opções de compartilhamento:', error);
-    }
-  };
-
-  const compartilharComo = async (formato) => {
-    const conteudoTexto = [
-      '📊 Relatório de Glicemia',
-      '',
-      '🔔 Alertas:',
-      ...alertas,
-      '',
-      'Conclusões sobre sintomas:',
-      ...sintomasTexto,
-      '',
-      '📋 Registros:',
-      ...registros.map(r => {
-        const dataFormatada = formatarData(r.timestamp);
-        const sintomasTxt = Array.isArray(r.sintomas) && r.sintomas.length > 0
-          ? ` com sintomas: ${r.sintomas.join(', ')}` : '';
-        return `• ${r.valor ?? '---'} mg/dL em ${dataFormatada}${sintomasTxt}`;
-      }),
-    ].join('\n');
-
-    const pasta = RNFS.TemporaryDirectoryPath;
-    let caminhoArquivo = '';
-    let mimeType = '';
-
-    try {
-      if (formato.includes('JSON')) {
-      const conteudoJSON = {
-        alertas,
-        sintomas: sintomasTexto,
-        registros: registros.map(r => ({
-          valor: r.valor ?? null,
-          data: formatarData(r.timestamp),
-          sintomas: r.sintomas ?? []
-        })),
-        geradoEm: new Date().toISOString()
-      };
-
-      const jsonString = JSON.stringify(conteudoJSON, null, 2);
-      caminhoArquivo = `${pasta}/relatorio_glicemia.json`;
-      await RNFS.writeFile(caminhoArquivo, jsonString, 'utf8');
-      mimeType = 'application/json';
-
-      } else if (formato.includes('CSV')) {
-        // CSV com BOM UTF-8
-        const csvPath = `${pasta}/relatorio_glicemia.csv`;
-        const cabecalho = 'Data,Valor,Sintomas\n';
-        const linhas = registros.map(r => {
-          const data = formatarData(r.timestamp);
-          const sintomas = (r.sintomas || []).join('; ');
-          return `"${data}","${r.valor ?? ''}","${sintomas}"`;
-        });
-        await RNFS.writeFile(csvPath, '\uFEFF' + cabecalho + linhas.join('\n'), 'utf8');
-        caminhoArquivo = csvPath;
-        mimeType = 'text/csv';
-
-      } else if (formato.includes('TXT')) {
-        // TXT já funcionava
-        const txtPath = `${pasta}/relatorio_glicemia.txt`;
-        await RNFS.writeFile(txtPath, '\uFEFF' + conteudoTexto, 'utf8');
-        caminhoArquivo = txtPath;
-        mimeType = 'text/plain';
-      }
-
-      // Compartilhar
-      await Share.open({
-        title: 'Compartilhar Relatório',
-        url: `file://${caminhoArquivo}`,
-        type: mimeType,
-      });
-
-    } catch (erro) {
-      console.error('Erro ao compartilhar arquivo:', erro);
-      Alert.alert('Erro', 'Não foi possível gerar o arquivo.');
-    }
-  };
-
   if (carregando) {
-    return (
-      <View style={estilos.container}>
-        <ActivityIndicator size="large" color={temaAtual.botaoFundo} />
-      </View>
-    );
+    return <View style={estilos.container}><ActivityIndicator size="large" color={temaAtual.botaoFundo} /></View>;
   }
 
   const screenWidth = Dimensions.get('window').width - 75;
   const intervalo = calcularIntervaloPorFiltro(filtro, mesSelecionado, anoSelecionado);
+
   const registrosFiltrados = registros.filter(r => {
     const data = r.timestamp.toDate ? r.timestamp.toDate() : new Date(r.timestamp);
     if (!intervalo) return true;
@@ -389,14 +85,8 @@ const RelatorioCompleto = () => {
   });
 
   const chartData = {
-    labels: registrosFiltrados.map((_, i) => ''), // sem rótulos
-    datasets: [
-      {
-        data: registrosFiltrados.map(r => Number(r.valor)),
-        color: () => temaAtual.botaoFundo,
-        strokeWidth: 2,
-      },
-    ],
+    labels: registrosFiltrados.map(() => ''),
+    datasets: [{ data: registrosFiltrados.map(r => Number(r.valor)), color: () => temaAtual.botaoFundo, strokeWidth: 2 }],
   };
 
   return (
@@ -414,90 +104,89 @@ const RelatorioCompleto = () => {
           </Picker>
         </View>
 
-        {filtro === 'mesAno' && (
-          <View style={estilos.filtrosMesAno}>
-            <Picker selectedValue={mesSelecionado} onValueChange={setMesSelecionado} style={[estilos.picker, { flex: 1, marginRight: 5, color: temaAtual.texto }]}>
-              {[...Array(12)].map((_, i) => (
-                <Picker.Item key={i} label={`Mês ${i + 1}`} value={i + 1} />
-              ))}
-            </Picker>
-            <Picker selectedValue={anoSelecionado} onValueChange={setAnoSelecionado} style={[estilos.picker, { flex: 1 }]}>
-              {Array.from({ length: 15 }, (_, i) => 2018 + i).map(ano => (
-                <Picker.Item key={ano} label={`${ano}`} value={ano} />
-              ))}
-            </Picker>
-          </View>
-        )}
-
-        {filtro === 'ano' && (
-          <View style={estilos.filtrosAno}>
-            <Picker selectedValue={anoSelecionado} onValueChange={setAnoSelecionado} style={[estilos.picker, { flex: 1 }]}>
-              {Array.from({ length: 15 }, (_, i) => 2018 + i).map(ano => (
-                <Picker.Item key={ano} label={`${ano}`} value={ano} />
-              ))}
-            </Picker>
-          </View>
-        )}
-
         <View style={estilos.sectionBox}>
           <Text style={estilos.subtitulo}>Gráfico de Variação</Text>
-          <LineChart
-            data={chartData}
-            width={screenWidth}
-            height={220}
+          <LineChart data={chartData} width={screenWidth} height={220}
             chartConfig={{
               backgroundGradientFrom: temaAtual.fundo,
               backgroundGradientTo: temaAtual.fundo,
               color: () => temaAtual.botaoFundo,
               labelColor: () => temaAtual.texto,
               propsForDots: { r: '3', strokeWidth: '1', stroke: temaAtual.botaoFundo },
-              propsForBackgroundLines: { stroke: temaAtual.texto + '33' }, // leve transparência
+              propsForBackgroundLines: { stroke: temaAtual.texto + '33' },
             }}
-            withDots={true}
+            withDots
             withShadow={false}
-            withInnerLines={true}
+            withInnerLines
             withOuterLines={false}
-            withHorizontalLabels={true}
+            withHorizontalLabels
             withVerticalLabels={false}
             bezier
             style={{ borderRadius: 10 }}
           />
         </View>
 
-        {(alertas.length === 0 && sintomasTexto.length === 0) ? (
-          <Text style={estilos.texto}>Nenhum alerta ou associação de sintomas para exibir.</Text>
-        ) : (
-          <>
-            <View style={estilos.sectionBox}>
-              <Text style={estilos.subtitulo}>Alertas da análise:</Text>
-              {alertas.map((item, i) => (
-                <Text key={`alerta-${i}`} style={estilos.texto}>• {item}</Text>
-              ))}
-            </View>
+        <View style={estilos.sectionBox}>
+          {alertas.map((item, i) => <Text key={i} style={estilos.texto}>• {item}</Text>)}
+          {sintomasTexto.map((item, i) => <Text key={i} style={estilos.texto}>• {item}</Text>)}
+        </View>
 
-            <View style={estilos.sectionBox}>
-              <Text style={estilos.subtitulo}>Conclusões sobre sintomas:</Text>
-              {sintomasTexto.map((item, i) => (
-                <Text key={`sintoma-${i}`} style={estilos.texto}>• {item}</Text>
-              ))}
-            </View>
-          </>
-        )}
+        <View style={estilos.sectionBox}>
+          <Text style={estilos.texto}>{avaliacaoPeso}</Text>
+        </View>
 
-        <Text style={[estilos.subtitulo, { marginTop: 20 }]}>Medições:</Text>
-        {registros.map((item) => (
-          <View key={item.id} style={estilos.registroBox}>
-            <Text style={estilos.texto}><Text style={estilos.label}>Data:</Text> {formatarData(item.timestamp)}</Text>
-            <Text style={estilos.texto}><Text style={estilos.label}>Valor:</Text> {item.valor ?? 'N/A'} mg/dL</Text>
-            {item.sintomas && item.sintomas.length > 0 && (
-              <Text style={estilos.texto}><Text style={estilos.label}>Sintomas:</Text> {item.sintomas.join(', ')}</Text>
-            )}
-          </View>
-        ))}
+        <View style={estilos.sectionBox}>
+          <Text style={estilos.subtitulo}>Medições de Glicemia</Text>
+          {registros.map(item => (
+            <View key={item.id} style={estilos.registroBox}>
+              <Text style={estilos.texto}>Data: {formatarData(item.timestamp)}</Text>
+              <Text style={estilos.texto}>Valor: {item.valor ?? 'N/A'} mg/dL</Text>
+              {item.sintomas && item.sintomas.length > 0 &&
+                <Text style={estilos.texto}>Sintomas: {item.sintomas.join(', ')}</Text>
+              }
+            </View>
+          ))}
+        </View>
+
+        <View style={estilos.sectionBox}>
+          <Text style={estilos.subtitulo}>Pressões Arteriais</Text>
+          {registrosPressao.length === 0 ? (
+            <Text style={estilos.texto}>Nenhum registro de pressão para o período selecionado.</Text>
+          ) : (
+            registrosPressao.map(item => (
+              <View key={item.id} style={estilos.registroBox}>
+                <Text style={estilos.texto}>Data: {formatarData(item.timestamp)}</Text>
+                <Text style={estilos.texto}>Sistólica: {item.sistolica ?? '---'} mmHg</Text>
+                <Text style={estilos.texto}>Diastólica: {item.diastolica ?? '---'} mmHg</Text>
+                <Text style={estilos.texto}>Classificação: {item.classificacao ?? '---'}</Text>
+                {item.observacao && <Text style={estilos.texto}>Obs: {item.observacao}</Text>}
+              </View>
+            ))
+          )}
+        </View>
+
+        <View style={estilos.sectionBox}>
+          <Text style={estilos.subtitulo}>Registros de Peso</Text>
+
+          {registrosPeso.length === 0 ? (
+            <Text style={estilos.texto}>Nenhum registro de peso para o período selecionado.</Text>
+          ) : (
+            registrosPeso.map((item, index) => (
+              <View key={index} style={estilos.registroBox}>
+                <Text style={estilos.texto}>Data: {formatarData(item.timestamp)}</Text>
+                <Text style={estilos.texto}>Peso: {item.peso} kg</Text>
+              </View>
+            ))
+          )}
+        </View>
+
       </ScrollView>
 
       <View style={estilos.botaoContainer}>
-        <TouchableOpacity onPress={compartilharRelatorio} style={estilos.botao}>
+        <TouchableOpacity
+          onPress={() => compartilharRelatorio({ alertas, sintomasTexto, registros, registrosPressao }, 'JSON')}
+          style={estilos.botao}
+        >
           <Text style={estilos.botaoTexto}>Compartilhar Relatório</Text>
         </TouchableOpacity>
       </View>

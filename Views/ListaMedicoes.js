@@ -20,7 +20,6 @@ const ListaMedicoes = () => {
     try {
       const dados = await buscarMedicoesUsuario();
 
-      // Garantir que sintomas sempre seja array e intensidade só se tiver sintomas
       const medicoesFormatadas = dados.map((m) => ({
         ...m,
         sintomas: Array.isArray(m.sintomas) ? m.sintomas : [],

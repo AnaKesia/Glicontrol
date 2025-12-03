@@ -14,6 +14,7 @@ export const temas = {
     txtObs: '#000',
     txtplaceholder:"#b0b0b0",
     botaoTexto: '#fff',
+    cardFundo: '#4da6ff',
   },
   escuro: {
     fundo: '#001f3f',
@@ -23,6 +24,7 @@ export const temas = {
     txtObs: '#000',
     botaoFundo: '#007AFF',
     botaoTexto: '#fff',
+    cardFundo: '#003366',
   },
 };
 

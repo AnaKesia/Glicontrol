@@ -12,6 +12,7 @@ import { buscarMedicoesUsuario } from '../firebaseService';
 import { analisarGlicemia } from '../services/analiseGlicemia';
 import { useConfiguracoes, temas, tamanhosFonte } from './Configuracoes';
 import { criarEstilos } from '../estilos/paginaInicial';
+import { prepararRegistrosDePressao, analisarPressao } from '../services/analisePressao';
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -21,6 +22,8 @@ const HomeScreen = () => {
   const [glicemias, setGlicemias] = useState([]);
   const [alertaRecente, setAlertaRecente] = useState(null);
   const [proximoMedicamento, setProximoMedicamento] = useState(null);
+  const [menuAberto, setMenuAberto] = useState(false);
+  const [alertasPressao, setAlertasPressao] = useState([]);
 
   const { config } = useConfiguracoes();
   const tema = temas[config.tema] || temas.escuro;
@@ -62,6 +65,33 @@ const HomeScreen = () => {
       Alert.alert('Erro', 'Falha ao carregar medições: ' + error.message);
     }
   };
+
+  const carregarPressao = async () => {
+    try {
+      const usuario = auth().currentUser;
+      if (!usuario) return;
+
+      const registros = await prepararRegistrosDePressao(usuario.uid);
+
+      const tresDiasAtras = Date.now() - (3 * 24 * 60 * 60 * 1000);
+
+      const registrosRecentes = registros.filter((item) => {
+        const dataRegistro = item.timestamp ? item.timestamp.toMillis?.() ?? item.timestamp : null;
+        return dataRegistro && dataRegistro >= tresDiasAtras;
+      });
+
+      if (registrosRecentes.length > 0) {
+        const alertas = analisarPressao(registrosRecentes);
+        setAlertasPressao(alertas);
+      } else {
+        setAlertasPressao([]);
+      }
+
+    } catch (error) {
+      console.log("Erro ao carregar pressão:", error);
+    }
+  };
+
 
   const carregarProximoMedicamento = async () => {
     const usuario = auth().currentUser;
@@ -149,7 +179,6 @@ const HomeScreen = () => {
           );
         }
 
-        // Para intervalo em horas
         if (medicamento.IntervaloHoras) {
           const base = new Date();
           base.setHours(0, 0, 0, 0);
@@ -186,6 +215,7 @@ const HomeScreen = () => {
   useFocusEffect(
     useCallback(() => {
       carregarMedicoes();
+      carregarPressao();
       carregarProximoMedicamento();
     }, [])
   );
@@ -236,26 +266,85 @@ const HomeScreen = () => {
         <TouchableOpacity
           style={[
             styles.alertaContainer,
-            { backgroundColor: alertaRecente?.startsWith('⚠️') ? '#ffc107' : tema.botaoFundo },
+            {
+              backgroundColor:
+                ((alertaRecente && alertaRecente.startsWith('⚠️')) ||
+                  (alertasPressao && alertasPressao.length > 0 &&
+                    String(alertasPressao[0]).startsWith('⚠️')))
+                  ? '#ffc107'
+                  : tema.botaoFundo,
+            },
           ]}
           onPress={() => navigation.navigate('Relatorios')}
         >
           <Text
             style={[
               styles.alertaTitulo,
-              { color: alertaRecente?.startsWith('⚠️') ? '#000' : tema.botaoTexto },
+              {
+                color:
+                  ((alertaRecente && alertaRecente.startsWith('⚠️')) ||
+                    (alertasPressao && alertasPressao.length > 0 &&
+                      String(alertasPressao[0]).startsWith('⚠️')))
+                    ? '#000'
+                    : tema.botaoTexto,
+              },
             ]}
           >
-            {alertaRecente?.startsWith('⚠️') ? '⚠️ Alerta Recente' : '✅ Sem alertas recentes'}
+            {
+              ((alertaRecente && alertaRecente.startsWith('⚠️')) ||
+                (alertasPressao && alertasPressao.length > 0 &&
+                  String(alertasPressao[0]).startsWith('⚠️')))
+                ? '⚠️ Alerta Recente'
+                : '✅ Sem alertas recentes'
+            }
           </Text>
-          <Text
-            style={[
-              styles.alertaTexto,
-              { color: alertaRecente?.startsWith('⚠️') ? '#000' : tema.botaoTexto },
-            ]}
-          >
-            {alertaRecente || 'Tudo sob controle nos últimos dias.'}
-          </Text>
+
+          <View>
+
+            {/* Exibe alerta de glicemia somente se for ⚠️ ou ✔️ */}
+            {alertaRecente &&
+              (alertaRecente.startsWith('⚠️') || alertaRecente.startsWith('✔️')) && (
+                <Text
+                  style={[
+                    styles.alertaTexto,
+                    { color: alertaRecente.startsWith('⚠️') ? '#000' : tema.botaoTexto },
+                  ]}
+                >
+                  {alertaRecente}
+                </Text>
+              )}
+
+            {/* Exibe alerta de pressão somente se for ⚠️ ou ✔️ */}
+            {(alertasPressao && alertasPressao.length > 0 &&
+              (String(alertasPressao[0]).startsWith('⚠️') ||
+               String(alertasPressao[0]).startsWith('✔️'))
+            ) && (
+              <Text
+                style={[
+                  styles.alertaTexto,
+                  {
+                    color: String(alertasPressao[0]).startsWith('⚠️') ? '#000' : tema.botaoTexto,
+                    marginTop: alertaRecente ? 6 : 0,
+                  },
+                ]}
+              >
+                {alertasPressao[0]}
+              </Text>
+            )}
+
+            {/* Se nenhum alerta válido */}
+            {(
+              (!alertaRecente || !alertaRecente.startsWith('⚠️')) &&
+              (!alertasPressao || alertasPressao.length === 0 ||
+                (!String(alertasPressao[0]).startsWith('⚠️') &&
+                 !String(alertasPressao[0]).startsWith('✔️')))
+            ) && (
+              <Text style={[styles.alertaTexto, { color: tema.botaoTexto }]}>
+                Tudo sob controle nos últimos dias.
+              </Text>
+            )}
+
+          </View>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.medicamentoContainer} onPress={() => navigation.navigate('Medicamentos')}>
@@ -272,9 +361,46 @@ const HomeScreen = () => {
         </TouchableOpacity>
       </ScrollView>
 
-      <TouchableOpacity style={styles.fab} onPress={() => navigation.navigate('InserirGlicemia')}>
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={() => setMenuAberto(!menuAberto)}
+      >
         <Icon name="add" size={30} color="#fff" />
       </TouchableOpacity>
+
+      {menuAberto && (
+        <View style={styles.menuFlutuante}>
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => {
+              setMenuAberto(false);
+              navigation.navigate('InserirGlicemia');
+            }}
+          >
+            <Text style={styles.menuItemTexto}>Registrar Medição</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => {
+              setMenuAberto(false);
+              navigation.navigate('InserirPressao');
+            }}
+          >
+            <Text style={styles.menuItemTexto}>Registrar Pressão</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => {
+              setMenuAberto(false);
+              navigation.navigate('InserirAgua');
+            }}
+          >
+            <Text style={styles.menuItemTexto}>Registrar Água</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       <View style={styles.footer}>
         <TouchableOpacity style={styles.footerButton} onPress={() => navigation.navigate('ListaRefeicoes')}>

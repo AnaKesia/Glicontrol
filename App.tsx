@@ -20,6 +20,11 @@ import Relatorios from './Views/Relatorios';
 import RelatorioCompleto from './Views/RelatorioCompleto';
 import TelaConfiguracoes from './Views/TelaConfiguracoes';
 import { ConfiguracoesProvider } from './Views/Configuracoes';
+import InserirAgua from './Views/InserirAgua';
+import InserirPressao from './Views/InserirPressao';
+import ListaAgua from './Views/ListaAgua';
+import ListaPressao from './Views/ListaPressao';
+import Perfil from './Views/Perfil';
 
 import 'react-native-gesture-handler';
 
@@ -68,6 +73,11 @@ export default function App() {
               <Stack.Screen name="Relatorios" component={Relatorios} />
               <Stack.Screen name="RelatorioCompleto" component={RelatorioCompleto} />
               <Stack.Screen name="TelaConfiguracoes" component={TelaConfiguracoes} />
+              <Stack.Screen name="InserirAgua" component={InserirAgua} />
+              <Stack.Screen name="InserirPressao" component={InserirPressao} />
+              <Stack.Screen name="ListaAgua" component={ListaAgua} />
+              <Stack.Screen name="ListaPressao" component={ListaPressao} />
+              <Stack.Screen name="Perfil" component={Perfil} />
             </>
           ) : (
             <>

@@ -8,6 +8,9 @@ import ListaRefeicoes from './ListaRefeicoes';
 import Relatorios from './Relatorios';
 import RelatorioCompleto from './RelatorioCompleto';
 import TelaConfiguracoes from './TelaConfiguracoes'
+import ListaAgua from './ListaAgua'
+import ListaPressao from './ListaPressao'
+import Perfil from './Perfil'
 
 import auth from '@react-native-firebase/auth';
 
@@ -45,9 +48,11 @@ export default function DrawerNavigator() {
       <Drawer.Screen name="Medições" component={ListaMedicoes} />
       <Drawer.Screen name="Medicamentos" component={ListaRemedios} />
       <Drawer.Screen name="Refeições" component={ListaRefeicoes} />
-      <Drawer.Screen name="Relatórios" component={Relatorios} />
       <Drawer.Screen name="Relatório" component={RelatorioCompleto} />
+      <Drawer.Screen name="Consumo de água" component={ListaAgua} />
+      <Drawer.Screen name="Pressão arterial" component={ListaPressao} />
       <Drawer.Screen name="Configurações" component={TelaConfiguracoes} />
+      <Drawer.Screen name="Perfil" component={Perfil} />
     </Drawer.Navigator>
   );
 }

@@ -99,4 +99,45 @@ export const criarEstilos = (tema, fonte) =>
       fontSize: fonte - 2,
       marginTop: 4,
     },
+    botaoAdicionar: {
+      position: 'absolute',
+      bottom: 90,
+      right: 20,
+      backgroundColor: tema.botaoFundo,
+      paddingVertical: 12,
+      paddingHorizontal: 15,
+      borderRadius: 10,
+      elevation: 5,
+    },
+    botaoAdicionarTexto: {
+      color: tema.botaoTexto,
+      fontSize: fonte.tamanhoBotao,
+      fontWeight: 'bold',
+    },
+    menuFlutuante: {
+      position: 'absolute',
+      bottom: 90,
+      right: 90,
+      padding: 10,
+      borderRadius: 12,
+      backgroundColor: tema.fundo,
+      elevation: 12,
+    },
+
+    menuItem: {
+      backgroundColor: tema.botaoFundo,
+      paddingVertical: 14,
+      paddingHorizontal: 18,
+      marginBottom: 10,
+      borderRadius: 10,
+      minWidth: 180,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+
+    menuItemTexto: {
+      color: tema.botaoTexto,
+      fontSize: fonte.tamanhoTitulo,
+      fontWeight: 'bold',
+    },
   });

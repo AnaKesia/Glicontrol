@@ -16,7 +16,7 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 }
 
 const tiposDisponiveis = [
-  { label: 'Café da manhã', value: 'Café da manhã' },
+  { label: 'Café da manhã', value: 'Café da Manhã' },
   { label: 'Almoço', value: 'Almoço' },
   { label: 'Lanche', value: 'Lanche' },
   { label: 'Jantar', value: 'Jantar' },

@@ -17,7 +17,6 @@ const RegisterScreen = () => {
       const { user } = await registrar(nome, email, senha);
       Alert.alert('Sucesso', 'Usuário registrado com sucesso!');
       console.log('Usuário registrado:', user.email);
-      navigation.goBack();
     } catch (error) {
       Alert.alert('Erro de registro', error.message);
     }

@@ -41,15 +41,15 @@ const ListaRemedios = ({ navigation }) => {
       headerRight: () => (
         <TouchableOpacity
           onPress={() => navigation.navigate('ListaUsoMedicamento')}
-          style={{ marginRight: 16 }}
+          style={{ marginRight: 16, flexDirection: 'row', alignItems: 'center' }}
         >
           <Icon name="menu-book" size={24} color="#fff" />
+          <Text style={{ color: '#fff', marginLeft: 6, fontSize: 16 }}>Registros</Text>
         </TouchableOpacity>
       ),
     });
   }, [navigation]);
 
-  // 🧹 Função para cancelar todas as notificações associadas a um medicamento
   const cancelarNotificacoesDoMedicamento = async (id) => {
     try {
       const doc = await firestore().collection('medicamentos').doc(id).get();
@@ -71,7 +71,6 @@ const ListaRemedios = ({ navigation }) => {
     }
   };
 
-  // 🗑️ Função de exclusão com cancelamento de notificações
   const confirmarExclusao = (id) => {
     Alert.alert('Excluir', 'Deseja excluir este medicamento?', [
       { text: 'Cancelar', style: 'cancel' },

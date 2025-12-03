@@ -26,6 +26,8 @@ const InserirGlicemia = () => {
   const styles = criarEstilos(tema, fonte);
 
   const [mostrarTimePicker, setMostrarTimePicker] = useState(false);
+  const [mostrarSintomas, setMostrarSintomas] = useState(false);
+  const [mostrarPeso, setMostrarPeso] = useState(false);
 
   const {
     valor, setValor,
@@ -34,6 +36,7 @@ const InserirGlicemia = () => {
     observacao, setObservacao,
     sintomas, setSintomas,
     intensidade, setIntensidade,
+    peso, setPeso,
     salvar
   } = useGlicemia(medicao);
 
@@ -45,7 +48,7 @@ const InserirGlicemia = () => {
 
   const handleSalvar = async () => {
     try {
-      await salvar();
+      await salvar({ peso });
       Alert.alert('Sucesso', 'Dados salvos com sucesso!');
       navigation.goBack();
     } catch (error) {
@@ -99,56 +102,91 @@ const InserirGlicemia = () => {
           setMostrar={setMostrarTimePicker}
         />
 
-        <Text style={[styles.title, { marginTop: 30 }]}>Sintomas (opcional)</Text>
+        <TouchableOpacity
+          style={[styles.toggleBotao, { backgroundColor: tema.fundoBotaoSecundario, marginTop: 20 }]}
+          onPress={() => setMostrarSintomas(!mostrarSintomas)}
+        >
+          <Text style={{ color: tema.texto, fontSize: fonte, fontWeight: 'bold' }}>
+            {mostrarSintomas ? '▶Ocultar Sintomas' : '▼Mostrar Sintomas'}
+          </Text>
+        </TouchableOpacity>
 
-        <View style={styles.sintomasContainer}>
-          {sintomasListados.map(item => {
-            const selecionado = sintomas.includes(item);
-            return (
-              <TouchableOpacity
-                key={item}
-                onPress={() => toggleSintoma(item)}
-                style={[
-                  styles.sintomaButton,
-                  { backgroundColor: selecionado ? tema.botaoFundo : tema.fundoBotaoSecundario },
-                ]}
-              >
-                <Text style={{
-                  color: selecionado ? tema.botaoTexto : tema.texto,
-                  fontSize: fonte
-                }}>
-                  {item}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        {sintomas.length > 0 && (
-          <>
-            <Text style={styles.label}>Intensidade:</Text>
-            <View style={styles.buttonGroup}>
-              {['leve', 'moderada', 'forte'].map(nivel => (
-                <TouchableOpacity
-                  key={nivel}
-                  style={[
-                    styles.intensidadeButton,
-                    { backgroundColor: intensidade === nivel ? tema.botaoFundo : tema.fundoBotaoSecundario },
-                  ]}
-                  onPress={() => setIntensidade(nivel)}
-                >
-                  <Text style={{
-                    color: intensidade === nivel ? tema.botaoTexto : tema.texto,
-                    fontWeight: 'bold',
-                    fontSize: fonte
-                  }}>
-                    {nivel}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+        {mostrarSintomas && (
+          <View style={{ marginTop: 10 }}>
+            <Text style={styles.label}>Sintomas (opcional):</Text>
+            <View style={styles.sintomasContainer}>
+              {sintomasListados.map(item => {
+                const selecionado = sintomas.includes(item);
+                return (
+                  <TouchableOpacity
+                    key={item}
+                    onPress={() => toggleSintoma(item)}
+                    style={[
+                      styles.sintomaButton,
+                      { backgroundColor: selecionado ? tema.botaoFundo : tema.fundoBotaoSecundario },
+                    ]}
+                  >
+                    <Text style={{
+                      color: selecionado ? tema.botaoTexto : tema.texto,
+                      fontSize: fonte
+                    }}>
+                      {item}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
-          </>
+
+            {sintomas.length > 0 && (
+              <>
+                <Text style={styles.label}>Intensidade:</Text>
+                <View style={styles.buttonGroup}>
+                  {['leve', 'moderada', 'forte'].map(nivel => (
+                    <TouchableOpacity
+                      key={nivel}
+                      style={[
+                        styles.intensidadeButton,
+                        { backgroundColor: intensidade === nivel ? tema.botaoFundo : tema.fundoBotaoSecundario },
+                      ]}
+                      onPress={() => setIntensidade(nivel)}
+                    >
+                      <Text style={{
+                        color: intensidade === nivel ? tema.botaoTexto : tema.texto,
+                        fontWeight: 'bold',
+                        fontSize: fonte
+                      }}>
+                        {nivel}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </>
+            )}
+          </View>
         )}
+
+        {/* <TouchableOpacity
+          style={[styles.toggleBotao, { backgroundColor: tema.fundoBotaoSecundario, marginTop: 30 }]}
+          onPress={() => setMostrarPeso(!mostrarPeso)}
+        >
+          <Text style={{ color: tema.texto, fontSize: fonte, fontWeight: 'bold' }}>
+            {mostrarPeso ? '▶Ocultar Peso' : '▼Adicionar Peso'}
+          </Text>
+        </TouchableOpacity>
+
+        {mostrarPeso && (
+          <View style={{ marginTop: 10 }}>
+            <Text style={styles.label}>Peso (kg) (opcional):</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Ex: 68.5"
+              placeholderTextColor="#b0b0b0"
+              keyboardType="numeric"
+              value={peso}
+              onChangeText={t => setPeso(t.replace(/[^0-9.,]/g, ''))}
+            />
+          </View>
+        )} */}
 
         <Text style={[styles.label, { marginTop: 20 }]}>Observações (opcional):</Text>
         <TextInput
