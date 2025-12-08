@@ -21,13 +21,10 @@ export const useRegister = () => {
     }
 
     try {
-      // 1) Registrar no Auth
       const cred = await auth().createUserWithEmailAndPassword(email, senha);
 
-      // 2) Salvar displayName no Auth (opcional)
       await cred.user.updateProfile({ displayName: nome });
 
-      // 3) 🔹 SALVAR NO FIRESTORE
       await firestore()
         .collection('usuarios')
         .doc(cred.user.uid)

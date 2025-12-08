@@ -57,7 +57,6 @@ const ListaAgua = () => {
     }
   };
 
-  // ✅ Recarrega sempre que voltar para a tela ou mudar a data
   useFocusEffect(
     useCallback(() => {
       carregarRegistros();

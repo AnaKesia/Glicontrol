@@ -1,4 +1,3 @@
-// services/analisePeso.js
 import firestore from '@react-native-firebase/firestore';
 
 export const buscarHistoricoPeso = async (userId) => {
@@ -17,13 +16,11 @@ export const analisarPeso = (historico, intervalo) => {
     };
   }
 
-  // Converter timestamps
   const registros = historico.map(item => ({
     peso: item.peso,
     timestamp: item.timestamp.toDate ? item.timestamp.toDate() : new Date(item.timestamp)
   }));
 
-  // Filtrar pelo período
   const filtrados = registros.filter(r => {
     if (!intervalo) return true;
     if (intervalo.inicio && r.timestamp < intervalo.inicio) return false;
@@ -38,7 +35,6 @@ export const analisarPeso = (historico, intervalo) => {
     };
   }
 
-  // Obter menor e maior peso no período
   const pesos = filtrados.map(i => i.peso);
   const menor = Math.min(...pesos);
   const maior = Math.max(...pesos);
@@ -53,6 +49,6 @@ export const analisarPeso = (historico, intervalo) => {
 
   return {
     avaliacao,
-    lista: filtrados.sort((a, b) => b.timestamp - a.timestamp) // mais recentes primeiro
+    lista: filtrados.sort((a, b) => b.timestamp - a.timestamp)
   };
 };
