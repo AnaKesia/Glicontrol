@@ -23,7 +23,7 @@ export const styles = StyleSheet.create({
     marginBottom: 10,
   },
   horarioText: {
-    fontSize: 16,
+    fontSize: 20,
   },
   switchContainer: {
     flexDirection: 'row',

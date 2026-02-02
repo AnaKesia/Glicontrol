@@ -25,7 +25,6 @@ const InserirGlicemia = () => {
   const fonte = tamanhosFonte[config.fonte];
   const styles = criarEstilos(tema, fonte);
 
-  const [mostrarTimePicker, setMostrarTimePicker] = useState(false);
   const [mostrarSintomas, setMostrarSintomas] = useState(false);
   const [mostrarPeso, setMostrarPeso] = useState(false);
 
@@ -90,17 +89,7 @@ const InserirGlicemia = () => {
           <Picker.Item label="Outro" value="outro" />
         </Picker>
 
-        <Button title="Selecionar Horário" onPress={() => setMostrarTimePicker(true)} />
-        <Text style={styles.horaSelecionada}>
-          {dataHora.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-        </Text>
-
-        <TimePicker
-          dataHora={dataHora}
-          setDataHora={setDataHora}
-          mostrar={mostrarTimePicker}
-          setMostrar={setMostrarTimePicker}
-        />
+        <Button title="Selecionar Horário" onPress={() => TimePicker({ dataHora, setDataHora })}/>
 
         <TouchableOpacity
           style={[styles.toggleBotao, { backgroundColor: tema.fundoBotaoSecundario, marginTop: 20 }]}
@@ -164,29 +153,6 @@ const InserirGlicemia = () => {
             )}
           </View>
         )}
-
-        {/* <TouchableOpacity
-          style={[styles.toggleBotao, { backgroundColor: tema.fundoBotaoSecundario, marginTop: 30 }]}
-          onPress={() => setMostrarPeso(!mostrarPeso)}
-        >
-          <Text style={{ color: tema.texto, fontSize: fonte, fontWeight: 'bold' }}>
-            {mostrarPeso ? '▶Ocultar Peso' : '▼Adicionar Peso'}
-          </Text>
-        </TouchableOpacity>
-
-        {mostrarPeso && (
-          <View style={{ marginTop: 10 }}>
-            <Text style={styles.label}>Peso (kg) (opcional):</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Ex: 68.5"
-              placeholderTextColor="#b0b0b0"
-              keyboardType="numeric"
-              value={peso}
-              onChangeText={t => setPeso(t.replace(/[^0-9.,]/g, ''))}
-            />
-          </View>
-        )} */}
 
         <Text style={[styles.label, { marginTop: 20 }]}>Observações (opcional):</Text>
         <TextInput

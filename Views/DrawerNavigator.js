@@ -11,6 +11,7 @@ import TelaConfiguracoes from './TelaConfiguracoes'
 import ListaAgua from './ListaAgua'
 import ListaPressao from './ListaPressao'
 import Perfil from './Perfil'
+import ListaAtividadesFisicas from './ListaAtividadesFisicas';
 
 import auth from '@react-native-firebase/auth';
 
@@ -51,6 +52,7 @@ export default function DrawerNavigator() {
       <Drawer.Screen name="Relatório" component={RelatorioCompleto} />
       <Drawer.Screen name="Consumo de água" component={ListaAgua} />
       <Drawer.Screen name="Pressão arterial" component={ListaPressao} />
+      <Drawer.Screen name="Atividade física" component={ListaAtividadesFisicas} />
       <Drawer.Screen name="Configurações" component={TelaConfiguracoes} />
       <Drawer.Screen name="Perfil" component={Perfil} />
     </Drawer.Navigator>

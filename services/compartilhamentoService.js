@@ -3,16 +3,16 @@ import { Alert } from 'react-native';
 import RNFS from 'react-native-fs';
 import { formatarData } from '../utils/formatarData';
 
-export async function compartilharRelatorio({ alertas, sintomasTexto, registros, registrosPressao }) {
+export async function compartilharRelatorio({ registros, registrosPressao, registrosPeso, atividadesFisicas, registrosAgua, alertas, sintomasTexto }) {
   try {
     const opcoes = ['📘 JSON', '🧾 CSV', '📝 TXT', 'Cancelar'];
 
     Alert.alert(
       'Compartilhar relatório',
       'Escolha o formato de compartilhamento:',
-      opcoes.slice(0, 3).map((opcao, i) => ({
+      opcoes.slice(0, 3).map((opcao) => ({
         text: opcao,
-        onPress: () => compartilharComo(opcao, { alertas, sintomasTexto, registros, registrosPressao }),
+        onPress: () => compartilharComo(opcao, { registros, registrosPressao, registrosPeso, atividadesFisicas, registrosAgua, alertas, sintomasTexto }),
       })),
       { cancelable: true }
     );
@@ -21,7 +21,7 @@ export async function compartilharRelatorio({ alertas, sintomasTexto, registros,
   }
 }
 
-async function compartilharComo(formato, { alertas, sintomasTexto, registros, registrosPressao }) {
+async function compartilharComo(formato, { registros, registrosPressao, registrosPeso, atividadesFisicas, registrosAgua, alertas, sintomasTexto }) {
   const conteudoTexto = [
     '📊 Relatório de Glicemia',
     '',
@@ -34,8 +34,7 @@ async function compartilharComo(formato, { alertas, sintomasTexto, registros, re
     '📋 Registros de Glicemia:',
     ...registros.map(r => {
       const dataFormatada = formatarData(r.timestamp);
-      const sintomasTxt = Array.isArray(r.sintomas) && r.sintomas.length > 0
-        ? ` com sintomas: ${r.sintomas.join(', ')}` : '';
+      const sintomasTxt = (r.sintomas && r.sintomas.length > 0) ? ` com sintomas: ${r.sintomas.join(', ')}` : '';
       return `• ${r.valor ?? '---'} mg/dL em ${dataFormatada}${sintomasTxt}`;
     }),
     '',
@@ -44,6 +43,15 @@ async function compartilharComo(formato, { alertas, sintomasTexto, registros, re
       const dataFormatada = formatarData(p.timestamp);
       return `• ${p.sistolica ?? '---'}/${p.diastolica ?? '---'} mmHg em ${dataFormatada} (${p.classificacao ?? '---'})${p.observacao ? ` | Obs: ${p.observacao}` : ''}`;
     }),
+    '',
+    '🏋️‍♂️ Atividades Físicas:',
+    ...atividadesFisicas.map(a => `• ${a.minutos ?? 0} minutos de ${a.tipo ?? 'atividade'} em ${formatarData(a.timestamp)}`),
+    '',
+    '💧 Consumo de Água:',
+    ...registrosAgua.map(a => `• ${a.quantidade ?? 0} ml em ${formatarData(a.timestamp)}`),
+    '',
+    '⚖️ Registros de Peso:',
+    ...registrosPeso.map(p => `• ${p.peso ?? '---'} kg em ${formatarData(p.timestamp)}`),
   ].join('\n');
 
   const pasta = RNFS.TemporaryDirectoryPath;
@@ -67,6 +75,19 @@ async function compartilharComo(formato, { alertas, sintomasTexto, registros, re
           classificacao: p.classificacao ?? '',
           observacao: p.observacao ?? ''
         })),
+        atividadesFisicas: atividadesFisicas.map(a => ({
+          tipo: a.tipo ?? '',
+          minutos: a.minutos ?? 0,
+          data: formatarData(a.timestamp)
+        })),
+        agua: registrosAgua.map(a => ({
+          quantidade: a.quantidade ?? 0,
+          data: formatarData(a.timestamp)
+        })),
+        peso: registrosPeso.map(p => ({
+          peso: p.peso ?? null,
+          data: formatarData(p.timestamp)
+        })),
         geradoEm: new Date().toISOString()
       };
 
@@ -88,6 +109,21 @@ async function compartilharComo(formato, { alertas, sintomasTexto, registros, re
       registrosPressao.forEach(p => {
         const data = formatarData(p.timestamp);
         csvConteudo += `"Pressão","${data}","${p.sistolica ?? ''}","${p.diastolica ?? ''}","","${p.classificacao ?? ''}","${p.observacao ?? ''}"\n`;
+      });
+
+      atividadesFisicas.forEach(a => {
+        const data = formatarData(a.timestamp);
+        csvConteudo += `"Atividade Física","${data}","${a.minutos ?? 0}","","","${a.tipo ?? ''}",""\n`;
+      });
+
+      registrosAgua.forEach(a => {
+        const data = formatarData(a.timestamp);
+        csvConteudo += `"Água","${data}","${a.quantidade ?? 0}","","","",""\n`;
+      });
+
+      registrosPeso.forEach(p => {
+        const data = formatarData(p.timestamp);
+        csvConteudo += `"Peso","${data}","${p.peso ?? 0}","","","",""\n`;
       });
 
       await RNFS.writeFile(csvPath, '\uFEFF' + csvConteudo, 'utf8');

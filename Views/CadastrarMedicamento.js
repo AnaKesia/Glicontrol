@@ -22,11 +22,11 @@ const CadastrarMedicamento = ({ route, navigation }) => {
   const [notificar, setNotificar] = useState(false);
   const [modoNotificacao, setModoNotificacao] = useState('horarios');
   const [horarios, setHorarios] = useState([new Date()]);
-  const [mostrarIndex, setMostrarIndex] = useState(null);
   const [intervaloHoras, setIntervaloHoras] = useState('');
 
-  const { config, temas } = useConfiguracoes();
+  const { config, temas, tamanhosFonte } = useConfiguracoes();
   const temaAtual = temas[config.tema];
+  const tamanhoFonteAtual = tamanhosFonte[config.fonte];
 
   useEffect(() => {
     if (editar && dados) {
@@ -96,7 +96,6 @@ const CadastrarMedicamento = ({ route, navigation }) => {
       novos[index] = date;
       setHorarios(novos);
     }
-    setMostrarIndex(null);
   };
 
   const formatarHorario = (date) => date.toTimeString().slice(0, 5);
@@ -122,7 +121,13 @@ const CadastrarMedicamento = ({ route, navigation }) => {
               },
             ]}
           >
-            <Text style={[styles.title, { color: temaAtual.texto }]}>
+            <Text
+              style={[
+                styles.title,
+                { color: temaAtual.texto, fontSize: tamanhoFonteAtual + 6 }
+              ]}
+            >
+
               {editar ? 'Editar Medicamento' : 'Cadastrar Medicamento'}
             </Text>
 
@@ -133,6 +138,7 @@ const CadastrarMedicamento = ({ route, navigation }) => {
                   backgroundColor:
                     temaAtual.fundo === '#cce6ff' ? '#fff' : '#003366',
                   color: temaAtual.texto,
+                  fontSize: tamanhoFonteAtual,
                 },
               ]}
               placeholder="Nome"
@@ -148,6 +154,7 @@ const CadastrarMedicamento = ({ route, navigation }) => {
                   backgroundColor:
                     temaAtual.fundo === '#cce6ff' ? '#fff' : '#003366',
                   color: temaAtual.texto,
+                  fontSize: tamanhoFonteAtual,
                 },
               ]}
               placeholder="Dose"
@@ -156,6 +163,7 @@ const CadastrarMedicamento = ({ route, navigation }) => {
               onChangeText={setDose}
             />
 
+
             <TextInput
               style={[
                 styles.input,
@@ -163,6 +171,7 @@ const CadastrarMedicamento = ({ route, navigation }) => {
                   backgroundColor:
                     temaAtual.fundo === '#cce6ff' ? '#fff' : '#003366',
                   color: temaAtual.texto,
+                  fontSize: tamanhoFonteAtual,
                 },
               ]}
               placeholder="Observações (opcional)"
@@ -171,8 +180,9 @@ const CadastrarMedicamento = ({ route, navigation }) => {
               onChangeText={setObservacoes}
             />
 
+
             <View style={styles.switchContainer}>
-              <Text style={[styles.switchLabel, { color: temaAtual.texto }]}>
+              <Text style={[styles.switchLabel, { color: temaAtual.texto, fontSize: tamanhoFonteAtual, }]}>
                 Deseja ser notificado?
               </Text>
               <Switch value={notificar} onValueChange={setNotificar} />
@@ -181,7 +191,7 @@ const CadastrarMedicamento = ({ route, navigation }) => {
             {notificar && (
               <>
                 <View style={styles.switchContainer}>
-                  <Text style={[styles.switchLabel, { color: temaAtual.texto }]}>
+                  <Text style={[styles.switchLabel, { color: temaAtual.texto, fontSize: tamanhoFonteAtual, }]}>
                     Modo:
                   </Text>
                   <TouchableOpacity onPress={() => setModoNotificacao('horarios')}>
@@ -190,7 +200,7 @@ const CadastrarMedicamento = ({ route, navigation }) => {
                         color:
                           modoNotificacao === 'horarios'
                             ? temaAtual.botaoFundo
-                            : '#ccc',
+                            : '#ccc', fontSize: tamanhoFonteAtual,
                         marginRight: 10,
                       }}
                     >
@@ -203,7 +213,7 @@ const CadastrarMedicamento = ({ route, navigation }) => {
                         color:
                           modoNotificacao === 'intervalo'
                             ? temaAtual.botaoFundo
-                            : '#ccc',
+                            : '#ccc', fontSize: tamanhoFonteAtual
                       }}
                     >
                       A cada X horas
@@ -214,20 +224,16 @@ const CadastrarMedicamento = ({ route, navigation }) => {
                 {modoNotificacao === 'horarios' ? (
                   <>
                     {horarios.map((h, i) => (
-                      <TouchableOpacity
-                        key={i}
-                        onPress={() => setMostrarIndex(i)}
-                        style={[
-                          styles.horarioButton,
-                          {
-                            backgroundColor:
-                              temaAtual.fundo === '#cce6ff'
-                                ? '#fff'
-                                : '#003366',
-                          },
-                        ]}
-                      >
-                        <Text style={[styles.horarioText, { color: temaAtual.texto }]}>
+                     <TouchableOpacity
+                       key={i}
+                       onPress={() =>
+                         TimePicker({
+                           dataHora: h,
+                           onConfirm: (date) => atualizarHorario(i, date),
+                         })
+                       }
+                     >
+                        <Text style={[styles.horarioText, { color: temaAtual.texto, fontSize: tamanhoFonteAtual}]}>
                           Horário {i + 1}: {formatarHorario(h)}
                         </Text>
                       </TouchableOpacity>
@@ -253,13 +259,6 @@ const CadastrarMedicamento = ({ route, navigation }) => {
                         />
                       )}
                     </View>
-
-                    <TimePicker
-                      dataHora={horarios[mostrarIndex]}
-                      setDataHora={(date) => atualizarHorario(mostrarIndex, date)}
-                      mostrar={mostrarIndex !== null}
-                      setMostrar={() => setMostrarIndex(null)}
-                    />
                   </>
                 ) : (
                   <TextInput
@@ -268,7 +267,7 @@ const CadastrarMedicamento = ({ route, navigation }) => {
                       {
                         backgroundColor:
                           temaAtual.fundo === '#cce6ff' ? '#fff' : '#003366',
-                        color: temaAtual.texto,
+                        color: temaAtual.texto, fontSize: tamanhoFonteAtual,
                       },
                     ]}
                     placeholder="A cada quantas horas?"

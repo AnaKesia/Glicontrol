@@ -5,6 +5,7 @@ import { Picker } from '@react-native-picker/picker';
 import { useConfiguracoes, tamanhosFonte } from './Configuracoes';
 import { criarEstilos } from '../estilos/inserirRefeicao';
 import { TimePicker } from '../hooks/TimePicker';
+import { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import { salvarRefeicao } from '../services/RefeicaoService';
 import { analisarImagem } from '../services/ImagemService';
 
@@ -37,7 +38,40 @@ const InserirRefeicao = () => {
     } catch (err) {
       Alert.alert('Erro', err.message);
     }
+
   };
+
+  const abrirDataHoraPicker = () => {
+    DateTimePickerAndroid.open({
+      value: data,
+      mode: 'date',
+      onChange: (event, selectedDate) => {
+        if (event.type !== 'set' || !selectedDate) return;
+
+        const dataSelecionada = new Date(selectedDate);
+
+        DateTimePickerAndroid.open({
+          value: dataSelecionada,
+          mode: 'time',
+          is24Hour: true,
+          onChange: (eventTime, selectedTime) => {
+            if (eventTime.type !== 'set' || !selectedTime) return;
+
+            const dataFinal = new Date(dataSelecionada);
+            dataFinal.setHours(
+              selectedTime.getHours(),
+              selectedTime.getMinutes(),
+              0,
+              0
+            );
+
+            setData(dataFinal);
+          },
+        });
+      },
+    });
+  };
+
 
   const handleSave = async () => {
     if (!tipo || !observacoes.trim()) {
@@ -86,12 +120,10 @@ const InserirRefeicao = () => {
       <Text style={styles.label}>Observações:</Text>
       <TextInput style={[styles.input, { height: 80 }]} multiline value={observacoes} onChangeText={setObservacoes} placeholder="Ex: suco, sobremesa..." placeholderTextColor="#888" />
 
-      <TouchableOpacity onPress={() => setMostrarData(true)} style={styles.dateButton}>
+     <TouchableOpacity onPress={abrirDataHoraPicker} style={styles.dateButton}>
         <Text style={styles.dateButtonText}>Selecionar Hora</Text>
       </TouchableOpacity>
       <Text style={styles.selectedDate}>{data.toLocaleString()}</Text>
-
-      <TimePicker dataHora={data} setDataHora={setData} mostrar={mostrarData} setMostrar={setMostrarData} />
 
       <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
         <Text style={styles.saveButtonText}>Salvar</Text>

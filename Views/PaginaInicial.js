@@ -399,6 +399,17 @@ const HomeScreen = () => {
           >
             <Text style={styles.menuItemTexto}>Registrar Água</Text>
           </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => {
+              setMenuAberto(false);
+              navigation.navigate('RegistroAtividade');
+            }}
+          >
+            <Text style={styles.menuItemTexto}>Registrar Atividade Física</Text>
+          </TouchableOpacity>
+
         </View>
       )}
 

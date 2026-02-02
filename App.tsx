@@ -25,6 +25,8 @@ import InserirPressao from './Views/InserirPressao';
 import ListaAgua from './Views/ListaAgua';
 import ListaPressao from './Views/ListaPressao';
 import Perfil from './Views/Perfil';
+import RegistroAtividade from './Views/RegistroAtividade';
+import ListaAtividadesFisicas from './Views/ListaAtividadesFisicas';
 
 import 'react-native-gesture-handler';
 
@@ -78,6 +80,8 @@ export default function App() {
               <Stack.Screen name="ListaAgua" component={ListaAgua} />
               <Stack.Screen name="ListaPressao" component={ListaPressao} />
               <Stack.Screen name="Perfil" component={Perfil} />
+              <Stack.Screen name="RegistroAtividade" component={RegistroAtividade} />
+              <Stack.Screen name="ListaAtividadesFisicas" component={ListaAtividadesFisicas} />
             </>
           ) : (
             <>

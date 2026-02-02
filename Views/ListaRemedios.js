@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import React, { useEffect, useState, useMemo } from 'react';
+import { View, Text, FlatList, TextInput, TouchableOpacity, Alert } from 'react-native';
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
 import notifee, { TriggerType, RepeatFrequency, AndroidImportance,
@@ -14,6 +14,7 @@ const ListaRemedios = ({ navigation }) => {
   const tamanhoFonte = tamanhosFonte[config.fonte];
 
   const [medicamentos, setMedicamentos] = useState([]);
+  const [filtro, setFiltro] = useState('');
 
   useEffect(() => {
     const userId = auth().currentUser?.uid;
@@ -49,6 +50,13 @@ const ListaRemedios = ({ navigation }) => {
       ),
     });
   }, [navigation]);
+
+  const medicamentosFiltrados = useMemo(() => {
+    if (!filtro.trim()) return medicamentos;
+    return medicamentos.filter(item =>
+      (item.Nome || '').toLowerCase().includes(filtro.toLowerCase())
+    );
+  }, [medicamentos, filtro]);
 
   const cancelarNotificacoesDoMedicamento = async (id) => {
     try {
@@ -105,12 +113,37 @@ const ListaRemedios = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
+      {/* Título */}
+      <Text style={styles.titulo}>Meus Medicamentos</Text>
+
+      {/* Busca */}
+      <View style={styles.filtroContainer}>
+        <Icon name="search" size={20} color="#666" style={styles.filtroIcon} />
+        <TextInput
+          style={styles.filtroInput}
+          placeholder="Buscar medicamento..."
+          placeholderTextColor="#999"
+          value={filtro}
+          onChangeText={setFiltro}
+        />
+        {filtro ? (
+          <TouchableOpacity onPress={() => setFiltro('')} style={{ padding: 4 }}>
+            <Icon name="close" size={20} color="#666" />
+          </TouchableOpacity>
+        ) : null}
+      </View>
+
       <FlatList
-        data={medicamentos}
+        data={medicamentosFiltrados}
         keyExtractor={item => item.id}
         renderItem={renderItem}
-        ListEmptyComponent={<Text style={styles.empty}>Nenhum medicamento cadastrado.</Text>}
+        ListEmptyComponent={
+          <Text style={styles.empty}>
+            {filtro ? 'Nenhum medicamento encontrado.' : 'Nenhum medicamento cadastrado.'}
+          </Text>
+        }
       />
+
       <TouchableOpacity
         style={styles.addButton}
         onPress={() => navigation.navigate('CadastrarMedicamento')}
@@ -124,13 +157,41 @@ const ListaRemedios = ({ navigation }) => {
 const ItemMedicamento = ({ item, onEditar, onExcluir, onConfirmarUso, tema, tamanhoFonte }) => {
   const renderHorarios = () => {
     if (Array.isArray(item.Horarios) && item.Horarios.length > 0) {
-      return <Text style={{ color: tema.texto, fontSize: tamanhoFonte }}>Horários: {item.Horarios.join(', ')}</Text>;
+      return (
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 4 }}>
+          <Text style={{ fontSize: 16, marginRight: 6 }}>🕐</Text>
+          <Text style={{ color: tema.texto, fontSize: tamanhoFonte }}>
+            {item.Horarios.join(', ')}
+          </Text>
+        </View>
+      );
     } else if (item.IntervaloHoras) {
-      return <Text style={{ color: tema.texto, fontSize: tamanhoFonte }}>A cada {item.IntervaloHoras} horas</Text>;
+      return (
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 4 }}>
+          <Text style={{ fontSize: 16, marginRight: 6 }}>⏱️</Text>
+          <Text style={{ color: tema.texto, fontSize: tamanhoFonte }}>
+            A cada {item.IntervaloHoras}h
+          </Text>
+        </View>
+      );
     } else if (item.Horário) {
-      return <Text style={{ color: tema.texto, fontSize: tamanhoFonte }}>Horário: {item.Horário}</Text>;
+      return (
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 4 }}>
+          <Text style={{ fontSize: 16, marginRight: 6 }}>🕐</Text>
+          <Text style={{ color: tema.texto, fontSize: tamanhoFonte }}>
+            {item.Horário}
+          </Text>
+        </View>
+      );
     } else {
-      return <Text style={{ color: tema.texto, fontSize: tamanhoFonte }}>Sem horário definido</Text>;
+      return (
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 4 }}>
+          <Text style={{ fontSize: 16, marginRight: 6 }}>🕐</Text>
+          <Text style={{ color: tema.texto, fontSize: tamanhoFonte, opacity: 0.6 }}>
+            Sem horário definido
+          </Text>
+        </View>
+      );
     }
   };
 
@@ -139,22 +200,39 @@ const ItemMedicamento = ({ item, onEditar, onExcluir, onConfirmarUso, tema, tama
   return (
     <View style={styles.item}>
       <View style={{ flex: 1 }}>
-        <Text style={styles.nome}>{item.Nome}</Text>
-        <Text style={{ color: tema.texto, fontSize: tamanhoFonte }}>Dose: {item.Dose}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+          <Text style={{ fontSize: 20, marginRight: 8 }}>💊</Text>
+          <Text style={styles.nome}>{item.Nome}</Text>
+        </View>
+
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 4 }}>
+          <Text style={{ fontSize: 16, marginRight: 6 }}>📏</Text>
+          <Text style={{ color: tema.texto, fontSize: tamanhoFonte }}>
+            {item.Dose}
+          </Text>
+        </View>
+
         {renderHorarios()}
+
         {item.Observações ? (
-          <Text style={{ color: tema.texto, fontSize: tamanhoFonte }}>Obs: {item.Observações}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginVertical: 4 }}>
+            <Text style={{ fontSize: 16, marginRight: 6 }}>📝</Text>
+            <Text style={{ color: tema.texto, fontSize: tamanhoFonte, flex: 1 }}>
+              {item.Observações}
+            </Text>
+          </View>
         ) : null}
       </View>
+
       <View style={styles.buttonsContainer}>
         <TouchableOpacity onPress={onEditar} style={styles.editButton}>
-          <Icon name="edit" size={24} color="#007AFF" />
+          <Icon name="edit" size={24} color="#fff" />
         </TouchableOpacity>
         <TouchableOpacity onPress={onExcluir} style={styles.deleteButton}>
-          <Icon name="delete" size={24} color="red" />
+          <Icon name="delete" size={24} color="#ef4444" />
         </TouchableOpacity>
         <TouchableOpacity onPress={onConfirmarUso} style={styles.checkButton}>
-          <Icon name="check-circle" size={24} color="green" />
+          <Icon name="check-circle" size={24} color="#22c55e" />
         </TouchableOpacity>
       </View>
     </View>

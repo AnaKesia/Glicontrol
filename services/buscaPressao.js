@@ -1,24 +1,29 @@
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
 
-export async function buscaRegistrosPressao(intervalo = null) {
-  const userId = auth().currentUser?.uid;
+export async function buscaRegistrosPressao(userId, intervalo = null) {
   if (!userId) return [];
 
-  let query = firestore().collection('pressoes').where('usuarioId', '==', userId);
+  const snapshot = await firestore()
+    .collection('pressoes')
+    .where('usuarioId', '==', userId)
+    .orderBy('timestamp', 'desc')
+    .get();
 
-  if (intervalo) {
-    if (intervalo.inicio) query = query.where('timestamp', '>=', intervalo.inicio);
-    if (intervalo.fim) query = query.where('timestamp', '<', intervalo.fim);
+  let registros = snapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data(),
+    timestamp: doc.data().timestamp?.toDate?.() ?? new Date(doc.data().timestamp),
+  }));
+
+  if (intervalo?.inicio) {
+    const inicio = intervalo.inicio instanceof Date ? intervalo.inicio : new Date(intervalo.inicio);
+    registros = registros.filter(r => r.timestamp >= inicio);
   }
-
-  query = query.orderBy('timestamp', 'desc');
-
-  const snapshot = await query.get();
-  const registros = [];
-  snapshot.forEach(doc => {
-    registros.push({ id: doc.id, ...doc.data() });
-  });
+  if (intervalo?.fim) {
+    const fim = intervalo.fim instanceof Date ? intervalo.fim : new Date(intervalo.fim);
+    registros = registros.filter(r => r.timestamp <= fim);
+  }
 
   return registros;
 }

@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, TextInput,
-  Switch, Alert, TouchableOpacity, ScrollView, Platform,
+  View, Text, StyleSheet, TextInput, Switch, Alert, TouchableOpacity, ScrollView,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
 import { useConfiguracoes } from './Configuracoes';
@@ -27,7 +26,6 @@ const ConfirmarUsoMedicamento = ({ route, navigation }) => {
   const [dataHora, setDataHora] = useState(
     dados?.timestamp?.toDate ? dados.timestamp.toDate() : new Date()
   );
-  const [mostrarPicker, setMostrarPicker] = useState(false);
 
   const { config, temas, tamanhosFonte } = useConfiguracoes();
   const tema = temas[config.tema];
@@ -45,7 +43,10 @@ const ConfirmarUsoMedicamento = ({ route, navigation }) => {
           .where('userid', '==', userId)
           .get();
 
-        const meds = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+        const meds = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
         setListaMedicamentos(meds);
       } catch (error) {
         console.error('Erro ao carregar medicamentos:', error);
@@ -60,10 +61,48 @@ const ConfirmarUsoMedicamento = ({ route, navigation }) => {
     if (!tomou) {
       setDose('0');
     } else {
-      const med = listaMedicamentos.find((m) => m.id === medicamentoSelecionado);
+      const med = listaMedicamentos.find(
+        (m) => m.id === medicamentoSelecionado
+      );
       if (med) setDose(med.Dose?.toString() || '0');
     }
-  }, [tomou, medicamentoSelecionado]);
+  }, [tomou, medicamentoSelecionado, listaMedicamentos]);
+
+  const abrirPickerDataHora = () => {
+    DateTimePickerAndroid.open({
+      value: dataHora,
+      mode: 'date',
+      onChange: (event, selectedDate) => {
+        if (event.type !== 'set' || !selectedDate) return;
+
+        const novaData = new Date(dataHora);
+        novaData.setFullYear(
+          selectedDate.getFullYear(),
+          selectedDate.getMonth(),
+          selectedDate.getDate()
+        );
+
+        DateTimePickerAndroid.open({
+          value: novaData,
+          mode: 'time',
+          is24Hour: true,
+          onChange: (event2, selectedTime) => {
+            if (event2.type !== 'set' || !selectedTime) return;
+
+            const final = new Date(novaData);
+            final.setHours(
+              selectedTime.getHours(),
+              selectedTime.getMinutes(),
+              0,
+              0
+            );
+
+            setDataHora(final);
+          },
+        });
+      },
+    });
+  };
 
   const salvarRegistro = async () => {
     const userId = auth().currentUser?.uid;
@@ -77,11 +116,6 @@ const ConfirmarUsoMedicamento = ({ route, navigation }) => {
         Nome: dados.NomeMedicamento || 'Desconhecido',
       };
 
-    const timestampFinal =
-      editar && dados?.timestamp?.toDate
-        ? new Date(dataHora)
-        : new Date(dataHora);
-
     const registro = {
       usuarioId: userId,
       medicamentoId: medicamentoSelecionado,
@@ -89,15 +123,20 @@ const ConfirmarUsoMedicamento = ({ route, navigation }) => {
       dose: parseFloat(dose),
       tomou,
       observacoes: observacoes.trim(),
-      timestamp: timestampFinal,
+      timestamp: new Date(dataHora),
     };
 
     try {
       if (editar && dados?.id) {
-        await firestore().collection('usoMedicamentos').doc(dados.id).update(registro);
+        await firestore()
+          .collection('usoMedicamentos')
+          .doc(dados.id)
+          .update(registro);
         Alert.alert('Sucesso', 'Registro atualizado!');
       } else {
-        await firestore().collection('usoMedicamentos').add(registro);
+        await firestore()
+          .collection('usoMedicamentos')
+          .add(registro);
         Alert.alert('Sucesso', 'Registro salvo com sucesso!');
       }
 
@@ -118,7 +157,7 @@ const ConfirmarUsoMedicamento = ({ route, navigation }) => {
       <View style={styles.pickerContainer}>
         <Picker
           selectedValue={medicamentoSelecionado}
-          onValueChange={(itemValue) => setMedicamentoSelecionado(itemValue)}
+          onValueChange={setMedicamentoSelecionado}
           dropdownIconColor={tema.texto}
           style={{ color: tema.texto }}
         >
@@ -150,26 +189,15 @@ const ConfirmarUsoMedicamento = ({ route, navigation }) => {
       />
 
       <Text style={styles.label}>Data e hora:</Text>
-      <TouchableOpacity
-        style={styles.input}
-        onPress={() => setMostrarPicker(true)}
-      >
+      <TouchableOpacity style={styles.input} onPress={abrirPickerDataHora}>
         <Text style={{ color: '#000' }}>
-          {dataHora.toLocaleDateString()} {dataHora.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          {dataHora.toLocaleDateString()} —{' '}
+          {dataHora.toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit',
+          })}
         </Text>
       </TouchableOpacity>
-
-      {mostrarPicker && (
-        <DateTimePicker
-          value={dataHora}
-          mode="datetime"
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-          onChange={(event, date) => {
-            setMostrarPicker(false);
-            if (date) setDataHora(date);
-          }}
-        />
-      )}
 
       <Text style={styles.label}>Observações (opcional):</Text>
       <TextInput

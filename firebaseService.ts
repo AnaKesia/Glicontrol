@@ -128,3 +128,55 @@ export const buscarMedicamentosUsuario = async () => {
     ...doc.data(),
   }));
 };
+
+export const criarAtividadeFisica = async ({
+  minutos,
+  tipo,
+  tipoPersonalizado,
+  data
+}) => {
+  const usuarioId = auth().currentUser.uid;
+
+  return await firestore().collection('atividadesFisicas').add({
+    usuarioId,
+    minutos,
+    tipo,
+    tipoPersonalizado: tipoPersonalizado || null,
+    timestamp: firestore.Timestamp.fromDate(new Date(data)),
+  });
+};
+
+export const buscarAtividadesFisicasUsuario = async () => {
+  const user = auth().currentUser;
+
+  if (!user) {
+    console.log('Usuário não autenticado ao buscar atividades');
+    return [];
+  }
+
+  const snapshot = await firestore()
+    .collection('atividadesFisicas')
+    .where('usuarioId', '==', user.uid)
+    .get();
+
+  console.log('Atividades encontradas:', snapshot.size);
+
+  const atividades = snapshot.docs.map(doc => {
+    const data = doc.data();
+
+    return {
+      id: doc.id,
+      minutos: data.minutos,
+      tipo: data.tipo,
+      tipoPersonalizado: data.tipoPersonalizado || null,
+      timestamp: data.timestamp?.toDate
+        ? data.timestamp.toDate()
+        : new Date(data.timestamp)
+    };
+  });
+
+  atividades.sort((a, b) => b.timestamp - a.timestamp);
+
+  return atividades;
+};
+

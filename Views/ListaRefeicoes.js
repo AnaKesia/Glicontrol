@@ -158,7 +158,7 @@ const ListaRefeicoes = () => {
             style={styles.actionButton}
             onPress={() => navigation.navigate('InserirRefeicao', { refeicao: item })}
           >
-            <Icon name="edit" size={24} color="blue" />
+            <Icon name="edit" size={24} color="white" />
           </TouchableOpacity>
           <TouchableOpacity style={styles.actionButton} onPress={() => confirmarExclusao(item.id)}>
             <Icon name="delete" size={24} color="red" />

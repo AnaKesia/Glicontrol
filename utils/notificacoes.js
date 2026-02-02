@@ -33,7 +33,7 @@ export const agendarNotificacao = async ({ nome, dose, modoNotificacao, horarios
         {
           title: 'Hora de tomar o medicamento',
           body: `${nome} - ${dose}`,
-          android: { channelId: 'medicamentos', smallIcon: 'ic_launcher' },
+          android: { channelId: 'medicamentos', smallIcon: 'ic_notif' },
         },
         {
           type: TriggerType.TIMESTAMP,
@@ -59,7 +59,7 @@ export const agendarNotificacao = async ({ nome, dose, modoNotificacao, horarios
         {
           title: 'Lembrete de medicamento',
           body: `${nome} - repetir a cada ${horas}h`,
-          android: { channelId: 'medicamentos', smallIcon: 'ic_launcher' },
+          android: { channelId: 'medicamentos', smallIcon: 'ic_notif' },
         },
         {
           type: TriggerType.TIMESTAMP,

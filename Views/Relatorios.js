@@ -36,15 +36,12 @@ const Relatorio = () => {
           ...doc.data()
         }));
 
-        // 📌 Intervalo de 5 dias (padrão do relatório inteligente)
         const agora = new Date();
         const inicio = new Date(agora.getTime() - 5 * 24 * 60 * 60 * 1000);
         const intervalo = { inicio, fim: agora };
 
-        // 🔎 Análise de glicemia
         const alertasGlicemia = analisarGlicemia(medicoes);
 
-        // 🔎 Associação com sintomas
         const registrosSintomas = await prepararRegistrosParaAnalise(userId);
         const associacoes = associarSintomas(registrosSintomas);
 
@@ -56,11 +53,9 @@ const Relatorio = () => {
 
         setConclusaoSintoma(relevantes);
 
-        // 🔎 Pressão arterial — agora no mesmo intervalo!
         const registrosPressao = await prepararRegistrosDePressao(userId);
         const alertasPressao = analisarPressao(registrosPressao, intervalo);
 
-        // 🟦 Junta todos os alertas
         const todosAlertas = [...alertasGlicemia, ...alertasPressao];
 
         setAlertas(todosAlertas);
@@ -87,7 +82,7 @@ const Relatorio = () => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.titulo}>Relatório Inteligente</Text>
+      <Text style={styles.titulo}>Relatório dos últimos 5 dias</Text>
       {alertas.length === 0 ? (
         <Text style={styles.texto}>Nenhum padrão relevante detectado.</Text>
       ) : (

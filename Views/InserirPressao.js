@@ -6,7 +6,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { usePressao } from '../hooks/usoPressao';
 import { useConfiguracoes, tamanhosFonte } from './Configuracoes';
 import { TimePicker } from '../hooks/TimePicker';
-import { criarEstilos } from '../estilos/inserirGlicemia';
+import { criarEstilos } from '../estilos/inserirPressao';
 
 const InserirPressao = () => {
   const navigation = useNavigation();
@@ -18,9 +18,6 @@ const InserirPressao = () => {
   const fonte = tamanhosFonte[config.fonte];
   const styles = criarEstilos(tema, fonte);
 
-  const [mostrarTimePicker, setMostrarTimePicker] = useState(false);
-
-  // Use o hook que já tem o estado de classificação
   const {
     sistolica, handleSistolicaChange,
     diastolica, handleDiastolicaChange,
@@ -30,9 +27,27 @@ const InserirPressao = () => {
     salvar
   } = usePressao(pressao);
 
+  const getClassificacaoCor = () => {
+    if (!classificacao) return { cor: tema.texto, fundo: tema.fundoBotaoSecundario };
+
+    if (classificacao === 'Normal') {
+      return { cor: '#dcfce7', fundo: '#22c55e' };
+    } else if (classificacao === 'Pré-hipertensão') {
+      return { cor: '#ffdb58', fundo: '#f59e0b' };
+    } else if (classificacao === 'Hipertensão estágio 1') {
+      return { cor: '#ea580c', fundo: '#fed7aa' };
+    } else if (classificacao === 'Hipertensão estágio 2' || classificacao === 'Crise hipertensiva') {
+      return { cor: '#cddddd', fundo: '#ef4444' };
+    }
+
+    return { cor: tema.texto, fundo: tema.fundoBotaoSecundario };
+  };
+
+  const corClassificacao = getClassificacaoCor();
+
   const handleSalvar = async () => {
     try {
-      await salvar(); // já salva a classificação calculada pelo hook
+      await salvar();
       Alert.alert('Sucesso', 'Pressão registrada com sucesso!');
       navigation.goBack();
     } catch (error) {
@@ -43,43 +58,55 @@ const InserirPressao = () => {
   return (
     <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
       <View style={styles.innerContainer}>
-        <Text style={styles.title}>{pressao ? 'Editar Pressão' : 'Nova Pressão'}</Text>
-
-        <Text style={styles.label}>Pressão Sistólica (mmHg):</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Ex: 120"
-          placeholderTextColor="#b0b0b0"
-          keyboardType="numeric"
-          value={sistolica}
-          onChangeText={handleSistolicaChange}
-        />
-
-        <Text style={styles.label}>Pressão Diastólica (mmHg):</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Ex: 80"
-          placeholderTextColor="#b0b0b0"
-          keyboardType="numeric"
-          value={diastolica}
-          onChangeText={handleDiastolicaChange}
-        />
-
-        <Text style={[styles.label, { marginTop: 10 }]}>
-          Classificação: {classificacao || '—'}
+        <Text style={styles.title}>
+          {pressao ? 'Editar Pressão' : 'Nova Medição de Pressão'}
         </Text>
 
-        <Button title="Selecionar Horário" onPress={() => setMostrarTimePicker(true)} />
-        <Text style={styles.horaSelecionada}>
-          {dataHora.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-        </Text>
+        {/* Inputs lado a lado */}
+        <View style={styles.inputContainer}>
+          <View style={styles.inputHalf}>
+            <Text style={styles.label}>Sistólica</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Ex: 120"
+              placeholderTextColor="#b0b0b0"
+              keyboardType="numeric"
+              value={sistolica}
+              onChangeText={handleSistolicaChange}
+            />
+            <Text style={styles.subLabel}>mmHg</Text>
+          </View>
 
-        <TimePicker
-          dataHora={dataHora}
-          setDataHora={setDataHora}
-          mostrar={mostrarTimePicker}
-          setMostrar={setMostrarTimePicker}
-        />
+          <View style={styles.divider} />
+
+          <View style={styles.inputHalf}>
+            <Text style={styles.label}>Diastólica</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Ex: 80"
+              placeholderTextColor="#b0b0b0"
+              keyboardType="numeric"
+              value={diastolica}
+              onChangeText={handleDiastolicaChange}
+            />
+            <Text style={styles.subLabel}>mmHg</Text>
+          </View>
+        </View>
+
+        {/* Card destaque com resultado e classificação */}
+        {sistolica && diastolica && (
+          <View style={[styles.resultCard, { backgroundColor: corClassificacao.fundo }]}>
+            <Text style={styles.resultLabel}>Sua Pressão</Text>
+            <Text style={styles.resultValue}>
+              {sistolica}/{diastolica}
+            </Text>
+            <Text style={[styles.classificacaoTexto, { color: corClassificacao.cor }]}>
+              {classificacao || '—'}
+            </Text>
+          </View>
+        )}
+
+        <Button title="Selecionar Horário" onPress={() => TimePicker({ dataHora, setDataHora })}/>
 
         <Text style={[styles.label, { marginTop: 20 }]}>Observações (opcional):</Text>
         <TextInput
@@ -91,6 +118,7 @@ const InserirPressao = () => {
           multiline
         />
 
+        {/* Botão Salvar */}
         <View style={{ marginTop: 30 }}>
           <Button
             title={pressao ? 'Salvar Alterações' : 'Salvar Pressão'}

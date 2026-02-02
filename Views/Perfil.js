@@ -3,7 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, Alert, ActivityIndicator } fro
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import { useConfiguracoes, tamanhosFonte } from './Configuracoes';
-import { criarEstilos } from '../estilos/relatorios';
+import { criarEstilos } from '../estilos/perfil';
 
 const Perfil = () => {
   const [nome, setNome] = useState('');

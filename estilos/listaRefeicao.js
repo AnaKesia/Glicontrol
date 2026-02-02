@@ -82,10 +82,22 @@ export const criarEstilos = (tema, fontSize, config) => {
       marginBottom: 10,
     },
     filtroLabel: {
-      fontSize: tema.fonte,
+      fontSize,
       fontWeight: '600',
       color: tema.texto,
       marginBottom: 5,
+    },
+    dropdownText: {
+      fontSize,
+      color: config.tema === 'escuro' ? 'white' : 'black',
+    },
+    dropdownItemText: {
+      fontSize,
+      color: config.tema === 'escuro' ? 'white' : 'black',
+    },
+    dropdownPlaceholder: {
+      fontSize,
+      color: config.tema === 'escuro' ? '#ccc' : '#666',
     },
     botaoOrdem: {
       paddingVertical: 6,
@@ -129,15 +141,6 @@ export const criarEstilos = (tema, fontSize, config) => {
       marginBottom: 10,
       borderWidth: 1,
       borderColor: config.tema === 'escuro' ? '#ccc' : '#888',
-    },
-    dropdownText: {
-      color: config.tema === 'escuro' ? 'white' : 'black',
-    },
-    dropdownPlaceholder: {
-      color: config.tema === 'escuro' ? '#ccc' : '#666',
-    },
-    dropdownItemText: {
-      color: 'black',
     },
  });
 };

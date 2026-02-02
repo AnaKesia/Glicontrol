@@ -12,7 +12,7 @@ const InserirAgua = () => {
   const [quantidade, setQuantidade] = useState('');
   const navigation = useNavigation();
   const route = useRoute();
-  const registroEdicao = route.params?.registroEdicao || null; // 🔹 Recebe o registro, se for edição
+  const registroEdicao = route.params?.registroEdicao || null;
 
   const { config, temas } = useConfiguracoes();
   const tema = temas[config.tema];
@@ -21,7 +21,6 @@ const InserirAgua = () => {
 
   const opcoesRapidas = [200, 300, 500, 750, 1000];
 
-  // 🔹 Preenche o campo automaticamente se for edição
   useEffect(() => {
     if (registroEdicao) {
       setQuantidade(String(registroEdicao.quantidade));
@@ -42,13 +41,11 @@ const InserirAgua = () => {
 
     try {
       if (registroEdicao) {
-        // 🔹 Atualiza o documento existente
         await firestore().collection('agua').doc(registroEdicao.id).update({
           quantidade: parseFloat(quantidade),
         });
         Alert.alert('Sucesso', 'Registro atualizado com sucesso!');
       } else {
-        // 🔹 Cria um novo documento
         await firestore().collection('agua').add({
           usuarioId: user.uid,
           quantidade: parseFloat(quantidade),
