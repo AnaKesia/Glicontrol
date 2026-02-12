@@ -214,11 +214,11 @@ const ItemMedicamento = ({ item, onEditar, onExcluir, onConfirmarUso, tema, tama
 
         {renderHorarios()}
 
-        {item.Observações ? (
+        {(item.Observacoes || item.observacoes || item.Observações) ? (
           <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginVertical: 4 }}>
             <Text style={{ fontSize: 16, marginRight: 6 }}>📝</Text>
             <Text style={{ color: tema.texto, fontSize: tamanhoFonte, flex: 1 }}>
-              {item.Observações}
+              {item.Observacoes || item.observacoes || item.Observações}
             </Text>
           </View>
         ) : null}
