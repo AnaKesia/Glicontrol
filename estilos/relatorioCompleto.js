@@ -25,7 +25,7 @@ export const criarEstilos = (tema, tamanhoFonte) => StyleSheet.create({
   },
   picker: {
     color: tema.texto,
-    backgroundColor: tema.fundo === '#cce6ff' ? '#ADD8E6' : '#003366',
+    backgroundColor: tema.cardFundo,
   },
   texto: {
     color: tema.texto,

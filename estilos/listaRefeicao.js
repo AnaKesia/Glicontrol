@@ -2,7 +2,6 @@ import { StyleSheet } from 'react-native';
 
 export const criarEstilos = (tema, fontSize, config) => {
   const azulEscuro = '#003366';
-  const azulClaro = '#f0f0f0';
 
  return StyleSheet.create({
   container: {
@@ -11,13 +10,13 @@ export const criarEstilos = (tema, fontSize, config) => {
   backgroundColor: tema.fundo,
   },
   item: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  backgroundColor: config.tema === 'escuro' ? azulEscuro : azulClaro,
-  padding: 12,
-  marginVertical: 6,
-  borderRadius: 8,
-  justifyContent: 'space-between',
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: tema.cardFundo,
+    padding: 12,
+    marginVertical: 6,
+    borderRadius: 8,
+    justifyContent: 'space-between',
   },
   itemContent: { flex: 1, marginRight: 8 },
   itemTitle: {
@@ -51,7 +50,7 @@ export const criarEstilos = (tema, fontSize, config) => {
     position: 'absolute',
     bottom: 20,
     right: 20,
-    backgroundColor: '#007bff',
+    backgroundColor: tema.cardFundo,
     width: 56,
     height: 56,
     borderRadius: 28,
@@ -61,7 +60,7 @@ export const criarEstilos = (tema, fontSize, config) => {
     },
     itemAnalise: {
      fontSize: fontSize - 3,
-     color: '#28a745',
+     color: 'tema.texto',
      marginTop: 4,
     },
     titulo: {
@@ -93,7 +92,7 @@ export const criarEstilos = (tema, fontSize, config) => {
     },
     dropdownItemText: {
       fontSize,
-      color: config.tema === 'escuro' ? 'white' : 'black',
+      color: 'black',
     },
     dropdownPlaceholder: {
       fontSize,

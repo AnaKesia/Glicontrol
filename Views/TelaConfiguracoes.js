@@ -53,11 +53,31 @@ const TelaConfiguracoes = () => {
         >
           <Text style={{ color: temas.escuro.botaoTexto }}>Escuro</Text>
         </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.botao,
+            { backgroundColor: config.tema === 'rosa' ? temas.rosa.botaoFundo : temas.rosa.fundo },
+          ]}
+          onPress={() => atualizarConfig({ tema: 'rosa' })}
+        >
+          <Text style={{ color: temas.rosa.botaoTexto }}>Rosa</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.botao,
+            { backgroundColor: config.tema === 'verde' ? temas.verde.botaoFundo : temas.verde.fundo },
+          ]}
+          onPress={() => atualizarConfig({ tema: 'verde' })}
+        >
+          <Text style={{ color: temas.verde.botaoTexto }}>Verde</Text>
+        </TouchableOpacity>
       </View>
 
       <Text style={[styles.label, { color: temas[config.tema].texto }]}>Tamanho da fonte:</Text>
       <View style={styles.botaoGrupo}>
-        {['pequena', 'media', 'grande'].map((tamanho) => (
+        {['pequena', 'media', 'grande', 'gigante'].map((tamanho) => (
           <TouchableOpacity
             key={tamanho}
             style={[
@@ -82,7 +102,7 @@ const TelaConfiguracoes = () => {
           { color: temas[config.tema].texto, fontSize: tamanhosFonte[config.fonte] },
         ]}
       >
-        Exemplo de texto no tamanho selecionado
+        Exemplo de texto no tamanho selecionado.
       </Text>
 
 

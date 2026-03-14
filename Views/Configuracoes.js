@@ -26,12 +26,34 @@ export const temas = {
     botaoTexto: '#fff',
     cardFundo: '#003366',
   },
+  rosa: {
+  fundo: '#ffcde1',
+  texto: '#ff1a8d',
+  botaoFundo: '#ff80c0',
+  fundoObs: '#000',
+  txtObs: '#000',
+  txtplaceholder:"#b0b0b0",
+  botaoTexto: '#fff',
+  cardFundo: '#ffb3d1',
+},
+
+verde: {
+  fundo: '#e6fff2',
+  texto: '#003d26',
+  botaoFundo: '#28a745',
+  fundoObs: '#000',
+  txtObs: '#000',
+  txtplaceholder:"#b0b0b0",
+  botaoTexto: '#fff',
+  cardFundo: '#66cc99',
+},
 };
 
 export const tamanhosFonte = {
   pequena: 14,
   media: 18,
   grande: 22,
+  gigante: 27,
 };
 
 const CHAVE_TEMA = '@configuracoes:tema';

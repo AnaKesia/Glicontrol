@@ -182,12 +182,11 @@ const RelatorioCompleto = () => {
         <Text style={estilos.titulo}>Relatório Completo</Text>
 
         {/* FILTROS */}
-        {/* FILTROS */}
         <View style={estilos.filtros}>
           <Picker
             selectedValue={filtro}
             onValueChange={(value) => setFiltro(value)}
-            style={estilos.picker} // estilo do filtro
+            style={estilos.picker}
           >
             <Picker.Item label="Últimos 7 dias" value="ultimos7" />
             <Picker.Item label="Últimos 30 dias" value="ultimos30" />
@@ -201,7 +200,7 @@ const RelatorioCompleto = () => {
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 }}>
               <Picker
                 selectedValue={mesSelecionado}
-                style={[estilos.picker, { flex: 1, marginRight: 5 }]} // mesmo estilo
+                style={[estilos.picker, { flex: 1, marginRight: 5 }]}
                 onValueChange={value => setMesSelecionado(value)}
               >
                 {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
@@ -211,7 +210,7 @@ const RelatorioCompleto = () => {
 
               <Picker
                 selectedValue={anoSelecionado}
-                style={[estilos.picker, { flex: 1, marginLeft: 5 }]} // mesmo estilo
+                style={[estilos.picker, { flex: 1, marginLeft: 5 }]}
                 onValueChange={value => setAnoSelecionado(value)}
               >
                 {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - i).map(a => (
@@ -225,7 +224,7 @@ const RelatorioCompleto = () => {
           {filtro === 'ano' && (
             <Picker
               selectedValue={anoSelecionado}
-              style={[estilos.picker, { marginTop: 8 }]} // mesmo estilo
+              style={[estilos.picker, { marginTop: 8 }]}
               onValueChange={value => setAnoSelecionado(value)}
             >
               {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - i).map(a => (
