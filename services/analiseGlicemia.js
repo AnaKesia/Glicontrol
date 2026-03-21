@@ -76,7 +76,7 @@ export function analisarGlicemia(registros, dias = 3) {
   }
 
   if (registrosParaAnalisar.length === 0) {
-    return [`Nenhum registro${dias ? ` recente (últimos ${dias} dias)` : ''} para analisar.`];
+    return [`Nenhum registro recente de glicemia para analisar.`];
   }
 
   // Hipoglicemia matinal recorrente

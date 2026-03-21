@@ -51,7 +51,7 @@ export function analisarPressao(registros, intervalo = null) {
   }
 
   if (registrosParaAnalisar.length === 0) {
-    return ['Nenhum registro nesse período para analisar.'];
+    return ['Nenhum registro de pressão nesse período para analisar.'];
   }
 
   const alertas = [];
