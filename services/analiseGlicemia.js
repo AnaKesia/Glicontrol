@@ -50,7 +50,7 @@ export async function prepararRegistrosParaAnalise(userId, dias = null) {
   return registros;
 }
 
-export function analisarGlicemia(registros, dias = 3) {
+export function analisarGlicemia(registros, dias = 5) {
   if (!Array.isArray(registros) || registros.length === 0) {
     return ['Nenhum registro de glicemia para analisar.'];
   }
@@ -151,7 +151,7 @@ export function analisarGlicemia(registros, dias = 3) {
   return alertas.length > 0 ? alertas : ['Nenhum alerta significativo encontrado nos últimos dias.'];
 }
 
-export function associarSintomas(registros, dias = 3) {
+export function associarSintomas(registros, dias = 5) {
   if (!Array.isArray(registros) || registros.length === 0) {
     return ['Nenhum registro de glicemia com sintomas para analisar.'];
   }

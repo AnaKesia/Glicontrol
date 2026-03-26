@@ -7,7 +7,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 
 import { useGlicemia } from '../hooks/usoGlicemia';
 import { useConfiguracoes, tamanhosFonte } from './Configuracoes';
-import { TimePicker } from '../hooks/TimePicker';
+import { TimePicker } from '../hooks/DateTimePicker';
 import { criarEstilos } from '../estilos/inserirGlicemia';
 
 const sintomasListados = [
@@ -84,12 +84,13 @@ const InserirGlicemia = () => {
           <Picker.Item label="Jejum" value="jejum" />
           <Picker.Item label="Pós-Café" value="pos-cafe" />
           <Picker.Item label="Pós-Almoço" value="pos-almoco" />
+          <Picker.Item label="Pós-Lanche" value="pos-lanche" />
           <Picker.Item label="Pós-Janta" value="pos-janta" />
           <Picker.Item label="Antes de Dormir" value="antes-dormir" />
           <Picker.Item label="Outro" value="outro" />
         </Picker>
 
-        <Button title="Selecionar Horário" onPress={() => TimePicker({ dataHora, setDataHora })}/>
+        <Button title="Selecionar Horário" onPress={() => TimePicker({ dataHora, onConfirm: setDataHora })}/>
 
         <TouchableOpacity
           style={[styles.toggleBotao, { backgroundColor: tema.fundoBotaoSecundario, marginTop: 20 }]}

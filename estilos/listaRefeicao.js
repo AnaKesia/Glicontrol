@@ -60,7 +60,7 @@ export const criarEstilos = (tema, fontSize, config) => {
     },
     itemAnalise: {
      fontSize: fontSize - 3,
-     color: 'tema.texto',
+     color: '#fff',
      marginTop: 4,
     },
     titulo: {

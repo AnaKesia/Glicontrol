@@ -72,13 +72,13 @@ export const criarEstilos = (tema, fonte) =>
       borderColor: '#e5e7eb',
     },
     resultLabel: {
-      color: tema.texto,
+      color: '#ffffff',
       fontSize: fonte - 1,
       opacity: 0.7,
       marginBottom: 8,
     },
     resultValue: {
-      color: tema.texto,
+      color: '#ffffff',
       fontSize: fonte + 10,
       fontWeight: 'bold',
       marginBottom: 8,
